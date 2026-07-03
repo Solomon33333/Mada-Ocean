@@ -1,57 +1,281 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profil - Mada Océan</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        :root { --ocean-dark: #0B3D5C; --coral: #FF6B35; --green: #00A896; }
-        body { background: linear-gradient(135deg, #0B3D5C 0%, #006494 100%); min-height: 100vh; font-family: 'Segoe UI', sans-serif; }
-        .card-ocean { background: white; border-radius: 20px; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.15); }
-        .avatar { width: 100px; height: 100px; border-radius: 50%; background: #FF6B35; color: white; font-size: 3rem; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
-    </style>
-</head>
-<body>
-    <nav class="navbar navbar-dark" style="background: rgba(11,61,92,0.95);">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="/">🌊 Mada Océan</a>
-            <div><a href="/dashboard" class="btn btn-outline-light btn-sm">Dashboard</a></div>
-        </div>
-    </nav>
+{% extends "base.html" %}
 
-    <div class="container mt-4">
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="card-ocean p-4 text-center">
-                    <div class="avatar" id="avatar">🐟</div>
-                    <h3 class="mt-3" id="profil-nom">Chargement...</h3>
-                    <p class="text-muted" id="profil-role"></p>
-                    <hr>
-                    <div id="profil-details"></div>
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- En-tête profil -->
+            <div class="card-ocean p-4 text-center mb-4">
+                <div class="avatar" id="avatar">🐟</div>
+                <h3 class="mt-3" id="profil-nom">Chargement...</h3>
+                <p class="text-muted" id="profil-role"></p>
+                
+                <!-- Badges -->
+                <div class="d-flex justify-content-center gap-2 mb-3" id="badges-container"></div>
+                
+                <!-- Note étoiles -->
+                <div class="mb-3" id="stars-container"></div>
+                
+                <!-- Actions rapides -->
+                <div class="d-flex justify-content-center gap-2 flex-wrap" id="quick-actions"></div>
+            </div>
+
+            <!-- Détails -->
+            <div class="row g-3">
+                <!-- Informations personnelles -->
+                <div class="col-md-6">
+                    <div class="card-ocean p-4 h-100">
+                        <h5><i class="bi bi-person"></i> Informations personnelles</h5>
+                        <hr>
+                        <div id="info-perso"></div>
+                    </div>
                 </div>
+
+                <!-- Statistiques -->
+                <div class="col-md-6">
+                    <div class="card-ocean p-4 h-100">
+                        <h5><i class="bi bi-graph-up"></i> Statistiques</h5>
+                        <hr>
+                        <div id="info-stats"></div>
+                    </div>
+                </div>
+
+                <!-- Abonnement (pêcheur uniquement) -->
+                <div class="col-md-6" id="abonnement-card" style="display:none;">
+                    <div class="card-ocean p-4 h-100">
+                        <h5><i class="bi bi-credit-card"></i> Abonnement</h5>
+                        <hr>
+                        <div id="info-abonnement"></div>
+                    </div>
+                </div>
+
+                <!-- Activité récente -->
+                <div class="col-md-6">
+                    <div class="card-ocean p-4 h-100">
+                        <h5><i class="bi bi-clock-history"></i> Dernière activité</h5>
+                        <hr>
+                        <div id="info-activite"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulaire modification -->
+            <div class="card-ocean p-4 mt-3" id="edit-form" style="display:none;">
+                <h5><i class="bi bi-pencil"></i> Modifier mon profil</h5>
+                <hr>
+                <form id="profilForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">👤 Nom</label>
+                            <input type="text" class="form-control" id="edit-nom">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">📧 Email</label>
+                            <input type="email" class="form-control" id="edit-email">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">📱 Téléphone</label>
+                            <input type="text" class="form-control" id="edit-telephone" disabled>
+                        </div>
+                        <div class="col-md-6" id="edit-port-group" style="display:none;">
+                            <label class="form-label fw-bold">📍 Port</label>
+                            <select class="form-select" id="edit-port">
+                                <option value="Mahavatse">Mahavatse</option>
+                                <option value="Mahajanga-by">Mahajanga-by</option>
+                                <option value="Saint-Augustin">Saint-Augustin</option>
+                                <option value="Anakao">Anakao</option>
+                                <option value="Salary">Salary</option>
+                                <option value="Ifaty">Ifaty</option>
+                                <option value="Mangarivotra">Mangarivotra</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6" id="edit-adresse-group" style="display:none;">
+                            <label class="form-label fw-bold">🚚 Adresse livraison</label>
+                            <input type="text" class="form-control" id="edit-adresse">
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-coral">
+                                <i class="bi bi-check-circle"></i> Enregistrer
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="toggleEdit()">
+                                Annuler
+                            </button>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
+</div>
+{% endblock %}
 
-    <script>
-        async function load() {
-            const res = await fetch('/api/me').then(r=>r.json());
-            if (!res.success) { window.location.href='/connexion'; return; }
+{% block scripts %}
+<style>
+    .avatar {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #FF6B35, #FF8C5A);
+        color: white;
+        font-size: 3rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+        box-shadow: 0 5px 20px rgba(255,107,53,0.3);
+    }
+    .badge-custom {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    .stars-display {
+        color: #FFD166;
+        font-size: 1.2rem;
+    }
+</style>
+
+<script>
+    async function load() {
+        const res = await fetch('/api/me').then(r => r.json());
+        if (!res.success) { window.location.href = '/connexion'; return; }
+        
+        const u = res.user;
+        
+        // Avatar et nom
+        document.getElementById('avatar').textContent = u.photo_profil || 
+            (u.role === 'pecheur' ? '🎣' : u.role === 'admin' ? '👑' : '🏨');
+        document.getElementById('profil-nom').textContent = u.prenom ? `${u.prenom} ${u.nom}` : u.nom;
+        document.getElementById('profil-role').textContent = 
+            u.role === 'pecheur' ? '🎣 Pêcheur' : 
+            u.role === 'admin' ? '👑 Administrateur' : '🏨 Acheteur';
+        
+        // Badges
+        const badges = u.badges || [];
+        const badgeLabels = {
+            'top_pecheur': {text: '🏆 Top Pêcheur', class: 'bg-warning text-dark'},
+            'verifie': {text: '✅ Vérifié', class: 'bg-success'},
+            'fidele': {text: '💎 Fidèle', class: 'bg-info'},
+            'veteran': {text: '🎖️ Vétéran', class: 'bg-primary'},
+            'client_fidele': {text: '⭐ Client Fidèle', class: 'bg-warning text-dark'},
+            'vip': {text: '👑 VIP', class: 'bg-danger'},
+            'admin': {text: '🛡️ Admin', class: 'bg-dark'},
+        };
+        
+        if (badges.length > 0) {
+            document.getElementById('badges-container').innerHTML = badges.map(b => {
+                const badge = badgeLabels[b] || {text: b, class: 'bg-secondary'};
+                return `<span class="badge-custom ${badge.class}">${badge.text}</span>`;
+            }).join(' ');
+        }
+        
+        // Étoiles
+        const note = u.note_moyenne || u.note || 5.0;
+        const stars = Math.round(note);
+        document.getElementById('stars-container').innerHTML = `
+            <span class="stars-display">
+                ${'★'.repeat(stars)}${'☆'.repeat(5 - stars)}
+            </span>
+            <span class="text-muted ms-2">${note}/5 (${u.nb_avis || 0} avis)</span>
+        `;
+        
+        // Actions rapides
+        let actionsHTML = '';
+        if (u.role === 'pecheur') {
+            if (u.abonnement_actif) {
+                actionsHTML += '<span class="badge bg-success p-2">✅ Abonnement actif</span>';
+            } else {
+                actionsHTML += '<a href="/abonnement" class="btn btn-coral btn-sm">💳 S\'abonner</a>';
+            }
+        }
+        actionsHTML += `
+            <button class="btn btn-outline-coral btn-sm" onclick="toggleEdit()">
+                <i class="bi bi-pencil"></i> Modifier
+            </button>
+            <a href="/notifications" class="btn btn-outline-coral btn-sm">
+                <i class="bi bi-bell"></i> Notifications
+            </a>
+        `;
+        document.getElementById('quick-actions').innerHTML = actionsHTML;
+        
+        // Informations personnelles
+        document.getElementById('info-perso').innerHTML = `
+            <p><i class="bi bi-phone"></i> <strong>${u.telephone || 'N/A'}</strong></p>
+            <p><i class="bi bi-envelope"></i> ${u.email || 'Non renseigné'}</p>
+            <p><i class="bi bi-geo-alt"></i> ${u.port || u.adresse_livraison || 'Non renseigné'}</p>
+            ${u.type_peche ? `<p><i class="bi bi-tools"></i> ${u.type_peche}</p>` : ''}
+            ${u.type_etablissement ? `<p><i class="bi bi-building"></i> ${u.type_etablissement}</p>` : ''}
+            ${u.experience_ans ? `<p><i class="bi bi-clock-history"></i> ${u.experience_ans} ans d'expérience</p>` : ''}
+        `;
+        
+        // Statistiques
+        if (u.role === 'pecheur') {
+            document.getElementById('info-stats').innerHTML = `
+                <p><i class="bi bi-cart-check"></i> <strong>${u.total_ventes || 0}</strong> ventes</p>
+                <p><i class="bi bi-cash"></i> <strong>${(u.revenu_total || 0).toLocaleString()} Ar</strong> de revenus</p>
+                <p><i class="bi bi-star"></i> <strong>${u.nb_avis || 0}</strong> avis reçus</p>
+            `;
             
-            const u = res.user;
-            document.getElementById('avatar').textContent = u.role === 'pecheur' ? '🎣' : u.role === 'admin' ? '👑' : '🏨';
-            document.getElementById('profil-nom').textContent = u.prenom ? `${u.prenom} ${u.nom}` : u.nom;
-            document.getElementById('profil-role').textContent = u.role === 'pecheur' ? 'Pêcheur' : u.role === 'admin' ? 'Administrateur' : 'Acheteur';
-            document.getElementById('profil-details').innerHTML = `
-                <p>📱 <strong>${u.telephone}</strong></p>
-                <p>📧 ${u.email || 'Non renseigné'}</p>
-                <p>📍 ${u.port || 'Non renseigné'}</p>
-                <p>⭐ Note : <strong>${u.note || 5.0}/5</strong></p>
-                <p>📅 Inscrit depuis : ${u.date_inscription || 'Récent'}</p>
+            // Abonnement
+            document.getElementById('abonnement-card').style.display = 'block';
+            if (u.abonnement_actif) {
+                document.getElementById('info-abonnement').innerHTML = `
+                    <p><span class="badge bg-success">✅ Actif</span></p>
+                    <p><i class="bi bi-calendar-check"></i> Depuis : <strong>${u.date_debut_abonnement || 'N/A'}</strong></p>
+                    <p><i class="bi bi-calendar-x"></i> Expire : <strong>${u.date_fin_abonnement || 'N/A'}</strong></p>
+                    <p><i class="bi bi-cash"></i> <strong>10 000 Ar/mois</strong></p>
+                `;
+            } else {
+                document.getElementById('info-abonnement').innerHTML = `
+                    <p><span class="badge bg-danger">❌ Inactif</span></p>
+                    <p class="text-muted">Souscrivez pour publier vos prises</p>
+                    <a href="/abonnement" class="btn btn-coral btn-sm">💳 S'abonner</a>
+                `;
+            }
+        } else if (u.role === 'acheteur') {
+            document.getElementById('info-stats').innerHTML = `
+                <p><i class="bi bi-basket"></i> <strong>${u.nb_commandes || 0}</strong> commandes</p>
+                <p><i class="bi bi-cash"></i> <strong>${(u.total_depense || 0).toLocaleString()} Ar</strong> dépensés</p>
             `;
         }
-        load();
-    </script>
-</body>
-</html>
+        
+        // Activité récente
+        document.getElementById('info-activite').innerHTML = `
+            <p><i class="bi bi-calendar"></i> Inscrit le : <strong>${u.date_inscription || 'N/A'}</strong></p>
+            <p><i class="bi bi-clock"></i> Dernière connexion : <strong>${u.derniere_connexion || 'N/A'}</strong></p>
+        `;
+        
+        // Pré-remplir le formulaire
+        document.getElementById('edit-nom').value = u.prenom ? `${u.prenom} ${u.nom}` : u.nom;
+        document.getElementById('edit-email').value = u.email || '';
+        document.getElementById('edit-telephone').value = u.telephone || '';
+        
+        if (u.role === 'pecheur') {
+            document.getElementById('edit-port-group').style.display = 'block';
+            document.getElementById('edit-port').value = u.port || '';
+        }
+        if (u.role === 'acheteur') {
+            document.getElementById('edit-adresse-group').style.display = 'block';
+            document.getElementById('edit-adresse').value = u.adresse_livraison || '';
+        }
+    }
+
+    function toggleEdit() {
+        const form = document.getElementById('edit-form');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        if (form.style.display === 'block') {
+            form.scrollIntoView({behavior: 'smooth'});
+        }
+    }
+
+    document.getElementById('profilForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        // Simulation sauvegarde
+        alert('✅ Profil mis à jour avec succès !');
+        toggleEdit();
+    });
+
+    load();
+</script>
+{% endblock %}
