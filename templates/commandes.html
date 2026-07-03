@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white">📦 Mes Commandes</h2>
+        <div>
+            <a href="/marche" class="btn btn-outline-light btn-sm me-2">
+                <i class="bi bi-shop"></i> Marché
+            </a>
+            <a href="/panier" class="btn btn-coral btn-sm">
+                <i class="bi bi-cart"></i> Panier
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card-ocean p-2 mb-3">
+        <div class="btn-group w-100 flex-wrap" role="group">
+            <button class="btn btn-outline-coral btn-sm active" onclick="filtrer('toutes')">Toutes</button>
+            <button class="btn btn-outline-coral btn-sm" onclick="filtrer('confirmee')">✅ Confirmées</button>
+            <button class="btn btn-outline-coral btn-sm" onclick="filtrer('en_preparation')">🔧 En préparation</button>
+            <button class="btn btn-outline-coral btn-sm" onclick="filtrer('en_cours')">🛵 En cours</button>
+            <button class="btn btn-outline-coral btn-sm" onclick="filtrer('livree')">📦 Livrées</button>
+        </div>
+    </div>
+
+    <!-- Liste des commandes -->
+    <div id="commandes">
+        <div class="text-center text-white py-5">
+            <div class="loading-spinner mx-auto"></div>
+            <p class="mt-3">Chargement de vos commandes...</p>
+        </div>
+    </div>
+
+    <!-- Modal détails commande -->
+    <div class="modal fade" id="commandeModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius:20px;">
+                <div class="modal-header" style="background:#0B3D5C;color:white;border-radius:20px 20px 0 0;">
+                    <h5 class="modal-title">📦 Détails de la commande</h5>
+                    <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="commande-details">
+                    <!-- Rempli dynamiquement -->
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let toutesCommandes = [];
+    //let currentUser = null;
+
+    async function load() {
+        // Charger l'utilisateur
+        const me = await fetch('/api/me').then(r => r.json());
+        if (!me.success) {
+            window.location.href = '/connexion?redirect=/commandes';
+            return;
+        }
+        currentUser = me.user;
+
+        // Charger les commandes
+        try {
+            const res = await fetch('/api/commandes').then(r => r.json());
+            
+            if (res.success && res.commandes.length > 0) {
+                toutesCommandes = res.commandes;
+                afficherCommandes(toutesCommandes);
+            } else {
+                document.getElementById('commandes').innerHTML = `
+                    <div class="card-ocean p-5 text-center">
+                        <div style="font-size:5rem;">📦</div>
+                        <h4>Aucune commande</h4>
+                        <p class="text-muted">${currentUser.role === 'acheteur' ? 
+                            'Vous n\'avez pas encore passé de commande.' : 
+                            'Aucune commande n\'a été passée sur vos prises.'}</p>
+                        ${currentUser.role === 'acheteur' ? 
+                            '<a href="/marche" class="btn btn-coral mt-3">Voir le marché</a>' : 
+                            '<a href="/dashboard" class="btn btn-coral mt-3">Retour au dashboard</a>'}
+                    </div>`;
+            }
+        } catch (err) {
+            document.getElementById('commandes').innerHTML = `
+                <div class="card-ocean p-5 text-center">
+                    <div style="font-size:5rem;">❌</div>
+                    <h5>Erreur de chargement</h5>
+                    <p class="text-muted">${err.message}</p>
+                </div>`;
+        }
+    }
+
+    function afficherCommandes(liste) {
+        if (liste.length === 0) {
+            document.getElementById('commandes').innerHTML = `
+                <div class="card-ocean p-4 text-center">
+                    <p class="text-muted">Aucune commande trouvée pour ce filtre</p>
+                </div>`;
+            return;
+        }
+
+        document.getElementById('commandes').innerHTML = liste.map(c => `
+            <div class="card-ocean p-4 mb-3">
+                <!-- En-tête commande -->
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                    <div>
+                        <h5 class="mb-0">📦 Commande #${c.id}</h5>
+                        <small class="text-muted">${c.uuid || ''}</small>
+                    </div>
+                    <span class="badge fs-6 ${getStatusClass(c.statut_livraison)}">
+                        ${getStatusIcon(c.statut_livraison)} ${getStatusLabel(c.statut_livraison)}
+                    </span>
+                </div>
+
+                <!-- Barre de progression livraison -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small text-muted mb-1">
+                        <span>Confirmée</span>
+                        <span>Préparation</span>
+                        <span>En cours</span>
+                        <span>Livrée</span>
+                    </div>
+                    <div class="progress" style="height: 8px; border-radius: 10px;">
+                        <div class="progress-bar ${getProgressClass(c.statut_livraison)}" 
+                             style="width: ${getProgressWidth(c.statut_livraison)}%;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Articles -->
+                <div class="bg-light rounded p-3 mb-3">
+                    <strong class="small text-muted">📋 ARTICLES</strong>
+                    ${(c.articles || []).map(a => `
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <span>${a.icon || '🐟'} ${a.espece || 'Produit'} × ${a.quantite_kg || 1} kg</span>
+                            <strong>${(a.prix_total || 0).toLocaleString()} Ar</strong>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <!-- Détails -->
+                <div class="row g-2 small">
+                    <div class="col-md-6">
+                        <i class="bi bi-truck"></i> <strong>Livraison :</strong> ${c.adresse_livraison || 'Non spécifiée'}
+                    </div>
+                    <div class="col-md-6">
+                        <i class="bi bi-cash"></i> <strong>Frais :</strong> ${(c.frais_livraison || 0).toLocaleString()} Ar
+                    </div>
+                    <div class="col-md-6">
+                        <i class="bi bi-calendar"></i> <strong>Commandé :</strong> ${c.date_commande || 'N/A'}
+                    </div>
+                    <div class="col-md-6">
+                        <i class="bi bi-clock"></i> <strong>Estimé :</strong> ${c.date_livraison_estimee || 'N/A'}
+                    </div>
+                    ${c.livreur ? `
+                    <div class="col-md-6">
+                        <i class="bi bi-person-badge"></i> <strong>Livreur :</strong> ${c.livreur}
+                    </div>` : ''}
+                </div>
+
+                <!-- Total -->
+                <hr>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-bold fs-5">Total</span>
+                    <span class="fw-bold fs-4" style="color:#FF6B35;">${(c.total_commande || 0).toLocaleString()} Ar</span>
+                </div>
+
+                <!-- Suivi -->
+                ${c.suivi && c.suivi.length > 0 ? `
+                <div class="mt-3">
+                    <strong class="small text-muted">📍 SUIVI</strong>
+                    <div class="timeline mt-2">
+                        ${c.suivi.map(s => `
+                            <div class="d-flex gap-2 mb-1 small">
+                                <span class="text-success">✅</span>
+                                <span>${s.statut}</span>
+                                <span class="text-muted ms-auto">${s.date || ''}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>` : ''}
+
+                <!-- Actions -->
+                <div class="mt-3 d-flex gap-2 flex-wrap">
+                    <button class="btn btn-outline-ocean btn-sm" onclick="voirDetails(${c.id})">
+                        <i class="bi bi-eye"></i> Détails
+                    </button>
+                    ${c.statut_livraison === 'confirmee' && currentUser && currentUser.role === 'acheteur' ? `
+                        <a href="/paiement" class="btn btn-coral btn-sm">
+                            <i class="bi bi-credit-card"></i> Payer
+                        </a>
+                    ` : ''}
+                    ${c.statut_livraison === 'en_cours' ? `
+                        <button class="btn btn-outline-success btn-sm" onclick="suivreLivraison(${c.id})">
+                            <i class="bi bi-geo-alt"></i> Suivre
+                        </button>
+                    ` : ''}
+                    <a href="/chat" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-chat-dots"></i> Contacter
+                    </a>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function filtrer(filtre) {
+        document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+
+        if (filtre === 'toutes') {
+            afficherCommandes(toutesCommandes);
+        } else {
+            afficherCommandes(toutesCommandes.filter(c => c.statut_livraison === filtre));
+        }
+    }
+
+    function getStatusClass(statut) {
+        const classes = {
+            'confirmee': 'bg-info',
+            'en_preparation': 'bg-warning text-dark',
+            'en_cours': 'bg-primary',
+            'livree': 'bg-success',
+            'annulee': 'bg-danger'
+        };
+        return classes[statut] || 'bg-secondary';
+    }
+
+    function getStatusIcon(statut) {
+        const icons = {
+            'confirmee': '✅',
+            'en_preparation': '🔧',
+            'en_cours': '🛵',
+            'livree': '📦',
+            'annulee': '❌'
+        };
+        return icons[statut] || '📋';
+    }
+
+    function getStatusLabel(statut) {
+        const labels = {
+            'confirmee': 'Confirmée',
+            'en_preparation': 'En préparation',
+            'en_cours': 'En cours de livraison',
+            'livree': 'Livrée',
+            'annulee': 'Annulée'
+        };
+        return labels[statut] || statut || 'Inconnu';
+    }
+
+    function getProgressWidth(statut) {
+        const widths = {
+            'confirmee': 25,
+            'en_preparation': 50,
+            'en_cours': 75,
+            'livree': 100
+        };
+        return widths[statut] || 10;
+    }
+
+    function getProgressClass(statut) {
+        if (statut === 'livree') return 'bg-success';
+        if (statut === 'en_cours') return 'bg-primary';
+        if (statut === 'en_preparation') return 'bg-warning';
+        return 'bg-info';
+    }
+
+    function voirDetails(id) {
+        const commande = toutesCommandes.find(c => c.id === id);
+        if (!commande) return;
+
+        document.getElementById('commande-details').innerHTML = `
+            <h6>📦 Commande #${commande.id}</h6>
+            <hr>
+            <p><strong>Statut :</strong> ${getStatusLabel(commande.statut_livraison)}</p>
+            <p><strong>Adresse :</strong> ${commande.adresse_livraison || 'N/A'}</p>
+            <p><strong>Livraison estimée :</strong> ${commande.date_livraison_estimee || 'N/A'}</p>
+            <p><strong>Livreur :</strong> ${commande.livreur || 'Non assigné'}</p>
+            <p><strong>Total :</strong> <span style="color:#FF6B35;">${(commande.total_commande || 0).toLocaleString()} Ar</span></p>
+            ${commande.suivi ? `
+                <hr>
+                <h6>📍 Historique de suivi</h6>
+                ${commande.suivi.map(s => `<p class="small mb-1">✅ ${s.statut} - <span class="text-muted">${s.date}</span></p>`).join('')}
+            ` : ''}
+        `;
+
+        new bootstrap.Modal(document.getElementById('commandeModal')).show();
+    }
+
+    function suivreLivraison(id) {
+        const commande = toutesCommandes.find(c => c.id === id);
+        if (commande) {
+            alert(`🚚 Livraison en cours\n\nLivreur : ${commande.livreur || 'En route'}\nAdresse : ${commande.adresse_livraison}\nEstimé : ${commande.date_livraison_estimee}`);
+        }
+    }
+
+    load();
+</script>
+{% endblock %}

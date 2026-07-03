@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white">
+            🔔 Notifications 
+            <span id="badge-count" class="badge bg-danger ms-2" style="display:none;"></span>
+        </h2>
+        <div>
+            <button class="btn btn-outline-light btn-sm me-2" onclick="marquerToutLu()">
+                <i class="bi bi-check-all"></i> Tout marquer lu
+            </button>
+            <a href="/dashboard" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtres rapides -->
+    <div class="card-ocean p-2 mb-3">
+        <div class="btn-group w-100" role="group">
+            <button class="btn btn-outline-coral btn-sm active" onclick="filtrer('toutes')">
+                <i class="bi bi-bell"></i> Toutes
+            </button>
+            <button class="btn btn-outline-coral btn-sm" onclick="filtrer('non_lues')">
+                <i class="bi bi-bell-fill"></i> Non lues
+            </button>
+            <button class="btn btn-outline-coral btn-sm" onclick="filtrer('reservation')">
+                📅 Réservations
+            </button>
+            <button class="btn btn-outline-coral btn-sm" onclick="filtrer('message')">
+                💬 Messages
+            </button>
+            <button class="btn btn-outline-coral btn-sm" onclick="filtrer('paiement')">
+                💰 Paiements
+            </button>
+            <button class="btn btn-outline-coral btn-sm" onclick="filtrer('commande')">
+                📦 Commandes
+            </button>
+        </div>
+    </div>
+
+    <!-- Liste des notifications -->
+    <div id="notifications">
+        <div class="text-center text-white py-5">
+            <div class="loading-spinner mx-auto"></div>
+            <p class="mt-3">Chargement des notifications...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let toutesNotifications = [];
+
+    async function load() {
+        try {
+            const res = await fetch('/api/notifications').then(r => r.json());
+            
+            if (res.success) {
+                toutesNotifications = res.notifications || [];
+                
+                // Mettre à jour le badge
+                const badge = document.getElementById('badge-count');
+                if (res.nb_non_lues > 0) {
+                    badge.textContent = res.nb_non_lues;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+                
+                afficherNotifications(toutesNotifications);
+            } else {
+                document.getElementById('notifications').innerHTML = `
+                    <div class="card-ocean p-5 text-center">
+                        <div style="font-size:4rem;">🔔</div>
+                        <h5>Aucune notification</h5>
+                        <p class="text-muted">Vous êtes à jour !</p>
+                    </div>`;
+            }
+        } catch (err) {
+            document.getElementById('notifications').innerHTML = `
+                <div class="card-ocean p-5 text-center">
+                    <div style="font-size:4rem;">❌</div>
+                    <h5>Erreur de chargement</h5>
+                    <p class="text-muted">${err.message}</p>
+                </div>`;
+        }
+    }
+
+    function afficherNotifications(liste) {
+        if (!liste || liste.length === 0) {
+            document.getElementById('notifications').innerHTML = `
+                <div class="card-ocean p-5 text-center">
+                    <div style="font-size:4rem;">🔔</div>
+                    <h5>Aucune notification</h5>
+                    <p class="text-muted">Vous êtes à jour !</p>
+                </div>`;
+            return;
+        }
+
+        // Trier : non lues d'abord, puis par date
+        const triees = [...liste].sort((a, b) => {
+            if (a.lu !== b.lu) return a.lu ? 1 : -1;
+            return new Date(b.date) - new Date(a.date);
+        });
+
+        document.getElementById('notifications').innerHTML = triees.map(n => `
+            <div class="card-ocean p-3 mb-2 ${n.lu ? 'notif-lue' : 'notif-non-lue'}" 
+                 onclick="${n.lu ? '' : `marquerLu(${n.id})`}"
+                 style="cursor: ${n.lu ? 'default' : 'pointer'};">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="d-flex gap-3">
+                        <span style="font-size:1.5rem;">${getIcon(n.type)}</span>
+                        <div>
+                            <strong class="${n.lu ? '' : 'text-dark'}">${n.message}</strong>
+                            <br>
+                            <small class="text-muted">
+                                <i class="bi bi-clock"></i> ${n.date || 'Date inconnue'}
+                            </small>
+                            <br>
+                            <small class="text-muted">${getTypeLabel(n.type)}</small>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        ${!n.lu ? '<span class="badge bg-danger mb-1">Nouveau</span>' : '<span class="badge bg-secondary mb-1">Lu</span>'}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function getIcon(type) {
+        const icons = {
+            'reservation': '📅',
+            'message': '💬',
+            'paiement': '💰',
+            'commande': '📦',
+            'livraison': '🚚',
+            'systeme': '⚙️',
+            'avis': '⭐'
+        };
+        return icons[type] || '🔔';
+    }
+
+    function getTypeLabel(type) {
+        const labels = {
+            'reservation': 'Réservation',
+            'message': 'Message',
+            'paiement': 'Paiement',
+            'commande': 'Commande',
+            'livraison': 'Livraison',
+            'systeme': 'Système',
+            'avis': 'Avis'
+        };
+        return labels[type] || type || 'Notification';
+    }
+
+    function filtrer(filtre) {
+        // Mettre à jour les boutons
+        document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+
+        let listeFiltree;
+        switch (filtre) {
+            case 'non_lues':
+                listeFiltree = toutesNotifications.filter(n => !n.lu);
+                break;
+            case 'reservation':
+            case 'message':
+            case 'paiement':
+            case 'commande':
+                listeFiltree = toutesNotifications.filter(n => n.type === filtre);
+                break;
+            default:
+                listeFiltree = toutesNotifications;
+        }
+        afficherNotifications(listeFiltree);
+    }
+
+    async function marquerLu(id) {
+        try {
+            await fetch('/api/notifications/lu', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({notification_id: id})
+            });
+            
+            // Mettre à jour localement
+            const notif = toutesNotifications.find(n => n.id === id);
+            if (notif) notif.lu = true;
+            
+            load();
+        } catch (err) {
+            console.error('Erreur marquage lu:', err);
+        }
+    }
+
+    async function marquerToutLu() {
+        if (!confirm('Marquer toutes les notifications comme lues ?')) return;
+        
+        for (const n of toutesNotifications) {
+            if (!n.lu) {
+                await fetch('/api/notifications/lu', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({notification_id: n.id})
+                });
+                n.lu = true;
+            }
+        }
+        load();
+        showToast('✅ Toutes les notifications sont marquées comme lues', 'success');
+    }
+
+    // Charger au démarrage
+    load();
+    
+    // Rafraîchir toutes les 30 secondes
+    setInterval(load, 30000);
+</script>
+
+<style>
+    .notif-non-lue {
+        border-left: 4px solid #FF6B35;
+        background: #FFF5F0;
+        transition: all 0.3s;
+    }
+    .notif-non-lue:hover {
+        background: #FFE8DB;
+        transform: translateX(3px);
+    }
+    .notif-lue {
+        opacity: 0.7;
+        border-left: 4px solid #ddd;
+    }
+</style>
+{% endblock %}

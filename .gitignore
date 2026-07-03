@@ -1,0 +1,40 @@
+# Environnement virtuel
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Base de données
+*.sql
+*.db
+*.sqlite
+
+# Modèles IA
+models_saves/*.joblib
+
+# Uploads
+static/uploads/*
+!static/uploads/.gitkeep
+
+# Environnement
+.env
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Déploiement
+node_modules/
+dist/
+build/
+database/
+data/

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌊 Mada Océan Pro</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --ocean-dark: #0B3D5C;
+            --ocean: #006494;
+            --coral: #FF6B35;
+            --green: #00A896;
+            --gold: #FFD166;
+            --sand: #FFF8F0;
+            --white: #FFFFFF;
+            --gray: #6C757D;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: linear-gradient(135deg, var(--ocean-dark) 0%, var(--ocean) 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        main {
+            flex: 1;
+        }
+        
+        .navbar-ocean {
+            background: rgba(11, 61, 92, 0.95) !important;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 2px 20px rgba(0,0,0,0.3);
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+        
+        .navbar-ocean .navbar-brand {
+            color: white !important;
+            font-weight: 800;
+            font-size: 1.4rem;
+            letter-spacing: -0.5px;
+        }
+        
+        .navbar-ocean .nav-link {
+            color: rgba(255,255,255,0.8) !important;
+            font-weight: 500;
+            padding: 8px 16px !important;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        
+        .navbar-ocean .nav-link:hover,
+        .navbar-ocean .nav-link.active {
+            color: white !important;
+            background: rgba(255,107,53,0.2);
+        }
+        
+        .card-ocean {
+            background: white;
+            border-radius: 20px;
+            border: none;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .card-ocean:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 50px rgba(0,0,0,0.2);
+        }
+        
+        .btn-coral {
+            background: var(--coral);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-coral:hover {
+            background: #e55a2b;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255,107,53,0.4);
+            color: white;
+        }
+        
+        .btn-ocean {
+            background: var(--ocean-dark);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        
+        .btn-ocean:hover {
+            background: #0a3550;
+            color: white;
+        }
+        
+        .btn-green {
+            background: var(--green);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-green:hover {
+            background: #00907d;
+            transform: translateY(-2px);
+            color: white;
+        }
+        
+        .btn-outline-ocean {
+            border: 2px solid var(--ocean-dark);
+            color: var(--ocean-dark);
+            padding: 10px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            background: white;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 800;
+        }
+        
+        .badge-status {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+        
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: var(--coral);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .hero-text {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #FFD166, #FF6B35);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .footer {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px 0;
+            margin-top: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-ocean sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                🌊 Mada Océan
+            </a>
+            <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#nav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="nav">
+                <ul class="navbar-nav ms-auto align-items-center" id="nav-links">
+                    <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-house"></i> Accueil</a></li>
+                    <li class="nav-item" id="li-dashboard" style="display:none"><a class="nav-link" href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+                    <li class="nav-item" id="li-marche" style="display:none"><a class="nav-link" href="/marche"><i class="bi bi-shop"></i> Marché</a></li>
+                    <li class="nav-item" id="li-reservations" style="display:none"><a class="nav-link" href="/reservations"><i class="bi bi-calendar-check"></i> Réservations</a></li>
+                    <li class="nav-item" id="li-commandes" style="display:none"><a class="nav-link" href="/commandes"><i class="bi bi-box-seam"></i> Commandes</a></li>
+                    <li class="nav-item" id="li-panier" style="display:none"><a class="nav-link" href="/panier"><i class="bi bi-cart"></i> Panier</a></li>
+                    <li class="nav-item" id="li-predictions" style="display:none"><a class="nav-link" href="/predictions"><i class="bi bi-cpu"></i> IA</a></li>
+                    <li class="nav-item" id="li-chat" style="display:none"><a class="nav-link" href="/chat"><i class="bi bi-chat-dots"></i> Chat</a></li>
+                    <li class="nav-item" id="li-notifications" style="display:none"><a class="nav-link" href="/notifications"><i class="bi bi-bell"></i> <span id="notif-badge" class="badge bg-danger" style="display:none;">0</span></a></li>
+                    <li class="nav-item" id="li-login"><a class="nav-link" href="/connexion"><i class="bi bi-box-arrow-in-right"></i> Connexion</a></li>
+                    <li class="nav-item" id="li-register"><a class="nav-link" href="/inscription"><i class="bi bi-person-plus"></i> Inscription</a></li>
+                    <li class="nav-item dropdown" id="li-user" style="display:none">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> <span id="username-nav"></span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><span class="dropdown-item-text fw-bold" id="userrole-nav"></span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/profil"><i class="bi bi-person"></i> Profil</a></li>
+                            <li><a class="dropdown-item" href="/abonnement" id="li-abonnement-menu" style="display:none;"><i class="bi bi-credit-card"></i> Abonnement</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Déconnexion</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Main Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer text-white">
+        <div class="container">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <h6>🌊 Mada Océan Pro</h6>
+                    <p class="small opacity-75">Oseaniako, Vendreko</p>
+                </div>
+                <div class="col-md-4">
+                    <h6>Liens rapides</h6>
+                    <p class="small mb-1"><a href="/marche" class="text-white-50">Marché</a></p>
+                    <p class="small mb-1"><a href="/predictions" class="text-white-50">IA Prédictions</a></p>
+                </div>
+                <div class="col-md-4">
+                    <h6>Contact</h6>
+                    <p class="small opacity-75">📱 +261 34 12 34 56<br>📧 contact@madaocean.mg</p>
+                </div>
+            </div>
+            <hr style="border-color: rgba(255,255,255,0.1);">
+            <p class="text-center small opacity-50 mb-0">Tuléar, Madagascar © 2026 - Tous droits réservés</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        let currentUser = null;
+        
+        // Toast notification
+        function showToast(message, type = 'success') {
+            const bg = type === 'success' ? 'bg-success' : type === 'error' ? 'bg-danger' : 'bg-warning';
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️';
+            document.getElementById('toast-container').innerHTML = `
+                <div class="toast align-items-center text-white ${bg} border-0 show" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body fw-bold">${icon} ${message}</div>
+                        <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            setTimeout(() => {
+                const toast = document.querySelector('.toast');
+                if (toast) toast.remove();
+            }, 4000);
+        }
+        
+        // Vérifier auth
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/me');
+                const data = await res.json();
+                
+                if (data.success) {
+                    currentUser = data.user;
+                    
+                    // Cacher boutons login/register
+                    document.getElementById('li-login').style.display = 'none';
+                    document.getElementById('li-register').style.display = 'none';
+                    
+                    // Afficher menu utilisateur
+                    document.getElementById('li-user').style.display = 'block';
+                    document.getElementById('li-dashboard').style.display = 'block';
+                    document.getElementById('li-marche').style.display = 'block';
+                    document.getElementById('li-reservations').style.display = 'block';
+                    document.getElementById('li-predictions').style.display = 'block';
+                    document.getElementById('li-chat').style.display = 'block';
+                    document.getElementById('li-notifications').style.display = 'block';
+                    
+                    // Afficher selon le rôle
+                    if (currentUser.role === 'acheteur') {
+                        document.getElementById('li-panier').style.display = 'block';
+                        document.getElementById('li-commandes').style.display = 'block';
+                    }
+                    
+                    if (currentUser.role === 'pecheur') {
+                        document.getElementById('li-abonnement-menu').style.display = 'block';
+                        document.getElementById('li-commandes').style.display = 'block';
+                    }
+                    
+                    // Nom utilisateur
+                    document.getElementById('username-nav').textContent = 
+                        currentUser.prenom || currentUser.nom;
+                    document.getElementById('userrole-nav').textContent = 
+                        currentUser.role === 'pecheur' ? '🎣 Pêcheur' : 
+                        currentUser.role === 'admin' ? '👑 Admin' : '🏨 Acheteur';
+                    
+                    // Notifications
+                    try {
+                        const notifRes = await fetch('/api/notifications');
+                        const notifData = await notifRes.json();
+                        if (notifData.success && notifData.nb_non_lues > 0) {
+                            const badge = document.getElementById('notif-badge');
+                            badge.textContent = notifData.nb_non_lues;
+                            badge.style.display = 'inline';
+                        }
+                    } catch (e) {}
+                }
+                return currentUser;
+            } catch (e) {
+                return null;
+            }
+        }
+        
+        async function logout() {
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.href = '/';
+        }
+        
+        // Init
+        document.addEventListener('DOMContentLoaded', checkAuth);
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

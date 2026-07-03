@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white">📋 Mes Réservations</h2>
+        <a href="/marche" class="btn btn-outline-light btn-sm">
+            <i class="bi bi-shop"></i> Voir le marché
+        </a>
+    </div>
+
+    <!-- Filtres rapides -->
+    <div class="card-ocean p-2 mb-3">
+        <div class="btn-group w-100" role="group">
+            <button class="btn btn-outline-coral btn-sm active" onclick="filtrer('toutes')">Toutes</button>
+            <button class="btn btn-outline-coral btn-sm" onclick="filtrer('en_attente')">En attente</button>
+            <button class="btn btn-outline-coral btn-sm" onclick="filtrer('confirmee')">Confirmées</button>
+            <button class="btn btn-outline-coral btn-sm" onclick="filtrer('annulee')">Annulées</button>
+        </div>
+    </div>
+
+    <div id="reservations">
+        <div class="text-center text-white py-5">
+            <div class="loading-spinner mx-auto"></div>
+            <p class="mt-3">Chargement de vos réservations...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let toutesReservations = [];
+    //let currentUser = null;
+
+    async function load() {
+        // Charger l'utilisateur
+        const me = await fetch('/api/me').then(r => r.json());
+        if (!me.success) {
+            window.location.href = '/connexion?redirect=/reservations';
+            return;
+        }
+        currentUser = me.user;
+
+        // Charger les réservations
+        const res = await fetch('/api/reservations').then(r => r.json());
+        
+        if (res.success && res.reservations.length > 0) {
+            toutesReservations = res.reservations;
+            afficherReservations(toutesReservations);
+        } else {
+            document.getElementById('reservations').innerHTML = `
+                <div class="card-ocean p-5 text-center">
+                    <div style="font-size:5rem;">📋</div>
+                    <h4>Aucune réservation</h4>
+                    <p class="text-muted">${currentUser.role === 'acheteur' ? 
+                        'Vous n\'avez pas encore réservé de produits.' : 
+                        'Aucun acheteur n\'a encore réservé vos prises.'}</p>
+                    ${currentUser.role === 'acheteur' ? 
+                        '<a href="/marche" class="btn btn-coral mt-3">Voir le marché</a>' : 
+                        '<a href="/dashboard" class="btn btn-coral mt-3">Retour au dashboard</a>'}
+                </div>`;
+        }
+    }
+
+    function afficherReservations(liste) {
+        if (liste.length === 0) {
+            document.getElementById('reservations').innerHTML = `
+                <div class="card-ocean p-4 text-center">
+                    <p class="text-muted">Aucune réservation trouvée pour ce filtre</p>
+                </div>`;
+            return;
+        }
+
+        document.getElementById('reservations').innerHTML = liste.map(r => `
+            <div class="card-ocean p-4 mb-3">
+                <div class="d-flex justify-content-between align-items-start flex-wrap">
+                    <div class="d-flex align-items-center gap-3">
+                        <span style="font-size:2.5rem;">${r.icon || '🐟'}</span>
+                        <div>
+                            <h5 class="mb-1">${r.espece || 'Produit'}</h5>
+                            <p class="text-muted mb-1">⚖️ ${r.poids_kg || '?'} kg</p>
+                            <p class="fw-bold mb-0" style="color:#FF6B35;">💰 ${(r.prix_total || 0).toLocaleString()} Ar</p>
+                        </div>
+                    </div>
+                    <span class="badge fs-6 ${getStatusClass(r.statut)}">${getStatusLabel(r.statut)}</span>
+                </div>
+                
+                <hr>
+                
+                <div class="row g-2 small text-muted">
+                    <div class="col-md-6">
+                        ${currentUser.role === 'pecheur' ? 
+                            `👤 Acheteur : <strong>${r.acheteur_nom || 'Inconnu'}</strong>` :
+                            `👤 Pêcheur : <strong>${r.pecheur_nom || r.acheteur_nom || 'Inconnu'}</strong>`
+                        }
+                    </div>
+                    <div class="col-md-6">
+                        📅 ${r.date || 'Date inconnue'}
+                    </div>
+                    <div class="col-md-6">
+                        💳 Paiement : <strong>${r.mode_paiement || 'Orange Money'}</strong>
+                    </div>
+                    <div class="col-md-6">
+                        🆔 Réf : <code>${r.reference || 'N/A'}</code>
+                    </div>
+                </div>
+                
+                <!-- Actions -->
+                <div class="mt-3 d-flex gap-2 flex-wrap">
+                    ${r.statut === 'en_attente' && currentUser.role === 'pecheur' ? `
+                        <button class="btn btn-green btn-sm" onclick="confirmer(${r.id})">
+                            <i class="bi bi-check-circle"></i> Confirmer la réservation
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="annuler(${r.id})">
+                            <i class="bi bi-x-circle"></i> Refuser
+                        </button>
+                    ` : ''}
+                    
+                    ${r.statut === 'confirmee' && currentUser.role === 'acheteur' ? `
+                        <a href="/paiement" class="btn btn-coral btn-sm">
+                            <i class="bi bi-credit-card"></i> Payer avec Orange Money
+                        </a>
+                    ` : ''}
+                    
+                    ${r.statut === 'confirmee' ? `
+                        <a href="/chat" class="btn btn-outline-ocean btn-sm">
+                            <i class="bi bi-chat-dots"></i> Contacter
+                        </a>
+                    ` : ''}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function filtrer(statut) {
+        // Mettre à jour les boutons actifs
+        document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        if (statut === 'toutes') {
+            afficherReservations(toutesReservations);
+        } else {
+            afficherReservations(toutesReservations.filter(r => r.statut === statut));
+        }
+    }
+
+    function getStatusClass(statut) {
+        switch (statut) {
+            case 'confirmee': return 'bg-success';
+            case 'en_attente': return 'bg-warning text-dark';
+            case 'payee': return 'bg-info';
+            case 'livree': return 'bg-primary';
+            case 'annulee': return 'bg-danger';
+            default: return 'bg-secondary';
+        }
+    }
+
+    function getStatusLabel(statut) {
+        switch (statut) {
+            case 'confirmee': return '✅ Confirmée';
+            case 'en_attente': return '⏳ En attente';
+            case 'payee': return '💳 Payée';
+            case 'livree': return '🚚 Livrée';
+            case 'annulee': return '❌ Annulée';
+            default: return statut || '?';
+        }
+    }
+
+    async function confirmer(id) {
+        if (!confirm('Confirmer cette réservation ? L\'acheteur sera notifié.')) return;
+        
+        try {
+            const res = await fetch(`/api/reservations/${id}/confirmer`, {
+                method: 'POST'
+            }).then(r => r.json());
+            
+            if (res.success) {
+                showToast(res.message, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast(res.message, 'error');
+            }
+        } catch (err) {
+            showToast('Erreur lors de la confirmation', 'error');
+        }
+    }
+
+    async function annuler(id) {
+        if (!confirm('Voulez-vous vraiment annuler cette réservation ?')) return;
+        
+        try {
+            const res = await fetch(`/api/reservations/${id}/annuler`, {
+                method: 'POST'
+            }).then(r => r.json());
+            
+            if (res.success) {
+                showToast(res.message, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast(res.message, 'error');
+            }
+        } catch (err) {
+            showToast('Erreur lors de l\'annulation', 'error');
+        }
+    }
+
+    load();
+</script>
+{% endblock %}

@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white">🧠 Prédictions IA</h2>
+        <a href="/dashboard" class="btn btn-outline-light btn-sm">
+            <i class="bi bi-speedometer2"></i> Dashboard
+        </a>
+    </div>
+
+    <!-- Carte météo -->
+    <div class="card-ocean p-4 mb-4" id="meteo-card">
+        <div class="text-center">
+            <div class="loading-spinner mx-auto"></div>
+            <p>Chargement des données météo...</p>
+        </div>
+    </div>
+
+    <!-- Résumé IA -->
+    <div class="card-ocean p-4 mb-4" id="resume-ia" style="display:none;">
+        <div class="d-flex align-items-center gap-3">
+            <div style="font-size:3rem;">🤖</div>
+            <div>
+                <h5 class="mb-1">Intelligence Artificielle</h5>
+                <p class="text-muted mb-0" id="ia-message"></p>
+                <small class="text-muted" id="ia-modele"></small>
+                <br><small class="text-muted" id="ia-nb-donnees"></small>
+            </div>
+            <div class="ms-auto text-center">
+                <div id="ia-confiance" style="font-size:2rem;font-weight:800;"></div>
+                <small class="text-muted">Confiance</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prédictions -->
+    <h4 class="text-white mb-3">📊 Espèces probables pour <span id="date-cible"></span></h4>
+    <div id="predictions">
+        <div class="text-center text-white py-5">
+            <div class="loading-spinner mx-auto"></div>
+            <p class="mt-3">L'IA analyse les données...</p>
+        </div>
+    </div>
+
+    <!-- Légende et conseils -->
+    <div class="card-ocean p-4 mt-4" id="conseils" style="display:none;">
+        <h5>💡 Conseils pour les pêcheurs</h5>
+        <ul class="mb-0" id="conseils-liste"></ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function load() {
+        try {
+            const res = await fetch('/api/predictions').then(r => r.json());
+            
+            if (res.success) {
+                const p = res.prediction;
+                
+                // Date cible
+                document.getElementById('date-cible').textContent = p.date_cible;
+                
+                // Carte météo
+                if (p.meteo) {
+                    document.getElementById('meteo-card').innerHTML = `
+                        <h5 class="mb-3">🌤️ Conditions météo - ${p.port}</h5>
+                        <div class="row g-3 text-center">
+                            <div class="col-3">
+                                <div style="font-size:2rem;">🌡️</div>
+                                <strong>${p.meteo.temperature_eau || 'N/A'}</strong>
+                                <br><small class="text-muted">Eau</small>
+                            </div>
+                            <div class="col-3">
+                                <div style="font-size:2rem;">💨</div>
+                                <strong>${p.meteo.vent || 'N/A'}</strong>
+                                <br><small class="text-muted">Vent</small>
+                            </div>
+                            <div class="col-3">
+                                <div style="font-size:2rem;">🌙</div>
+                                <strong>${p.meteo.phase_lunaire || 'N/A'}</strong>
+                                <br><small class="text-muted">Lune</small>
+                            </div>
+                            <div class="col-3">
+                                <div style="font-size:2rem;">📊</div>
+                                <strong>${p.meteo.pression || 'N/A'}</strong>
+                                <br><small class="text-muted">Pression</small>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // Résumé IA
+                document.getElementById('resume-ia').style.display = 'block';
+                document.getElementById('ia-message').textContent = p.message || '';
+                document.getElementById('ia-modele').textContent = '🧠 Modèle : ' + (p.modele || 'IA');
+                document.getElementById('ia-nb-donnees').textContent = '📈 Données analysées : ' + (p.nb_donnees || '0') + ' enregistrements';
+                document.getElementById('ia-confiance').textContent = (p.confiance_globale || 0) + '%';
+                
+                const confiance = p.confiance_globale || 0;
+                document.getElementById('ia-confiance').style.color = 
+                    confiance >= 75 ? '#00A896' : 
+                    confiance >= 50 ? '#FFD166' : '#FF6B35';
+                
+                // Prédictions
+                if (p.predictions && p.predictions.length > 0) {
+                    document.getElementById('predictions').innerHTML = p.predictions.map((pr, i) => `
+                        <div class="card-ocean p-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="d-flex align-items-center gap-3">
+                                    <span style="font-size:2.5rem;">${pr.icon || '🐟'}</span>
+                                    <div>
+                                        <strong class="fs-5">${pr.espece}</strong>
+                                        ${pr.tendance === 'hausse' ? '<span class="badge bg-success ms-2">📈 Hausse</span>' : 
+                                          pr.tendance === 'baisse' ? '<span class="badge bg-danger ms-2">📉 Baisse</span>' : 
+                                          '<span class="badge bg-secondary ms-2">➡️ Stable</span>'}
+                                    </div>
+                                </div>
+                                <span class="badge fs-6 ${getConfianceClass(pr.confiance)}">${pr.confiance || 'N/A'}</span>
+                            </div>
+                            
+                            <!-- Barre de probabilité -->
+                            <div class="progress mb-3" style="height: 25px; border-radius: 15px;">
+                                <div class="progress-bar ${getProgressClass(pr.probabilite || 0)}" 
+                                     style="width: ${pr.probabilite || 0}%;" 
+                                     role="progressbar">
+                                    ${pr.probabilite || 0}%
+                                </div>
+                            </div>
+                            
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <div class="bg-light rounded p-2 text-center">
+                                        <small class="text-muted">📊 Quantité estimée</small><br>
+                                        <strong>~${pr.quantite_estimee_kg || 0} kg</strong>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="bg-light rounded p-2 text-center">
+                                        <small class="text-muted">💰 Prix suggéré</small><br>
+                                        <strong>~${(pr.prix_suggere_kg || 0).toLocaleString()} Ar/kg</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    document.getElementById('predictions').innerHTML = `
+                        <div class="card-ocean p-4 text-center">
+                            <p class="text-muted">Aucune prédiction disponible</p>
+                        </div>`;
+                }
+                
+                // Conseils
+                if (p.predictions && p.predictions.length > 0) {
+                    document.getElementById('conseils').style.display = 'block';
+                    const top = p.predictions[0];
+                    const second = p.predictions[1] || top;
+                    document.getElementById('conseils-liste').innerHTML = `
+                        <li>🎯 <strong>${top.espece}</strong> est l'espèce la plus probable (${top.probabilite}%)</li>
+                        <li>💰 Prix suggéré : <strong>${(top.prix_suggere_kg || 0).toLocaleString()} Ar/kg</strong></li>
+                        <li>📈 Tendance : <strong>${top.tendance || 'stable'}</strong></li>
+                        <li>🥈 Deuxième choix : <strong>${second.espece}</strong> (${second.probabilite}%)</li>
+                        <li>⏰ Meilleur moment : <strong>tôt le matin (4h-8h)</strong></li>
+                        <li>📍 Port recommandé : <strong>${p.port}</strong></li>
+                    `;
+                }
+                
+                // Avertissement si données simulées
+                if (p.warning) {
+                    showToast('⚠️ ' + p.warning, 'warning');
+                }
+                
+            } else {
+                document.getElementById('predictions').innerHTML = `
+                    <div class="card-ocean p-5 text-center">
+                        <div style="font-size:5rem;">🧠</div>
+                        <h5>Données insuffisantes</h5>
+                        <p class="text-muted">L'IA a besoin de plus de données historiques.</p>
+                        <a href="/dashboard" class="btn btn-coral mt-3">Retour au dashboard</a>
+                    </div>`;
+            }
+        } catch (err) {
+            document.getElementById('predictions').innerHTML = `
+                <div class="card-ocean p-5 text-center">
+                    <div style="font-size:5rem;">❌</div>
+                    <h5>Erreur de chargement</h5>
+                    <p class="text-muted">${err.message}</p>
+                </div>`;
+        }
+    }
+
+    function getConfianceClass(confiance) {
+        switch (confiance) {
+            case 'Élevée': return 'bg-success';
+            case 'Moyenne': return 'bg-warning text-dark';
+            case 'Faible': return 'bg-secondary';
+            default: return 'bg-info';
+        }
+    }
+
+    function getProgressClass(probabilite) {
+        if (probabilite >= 75) return 'bg-success';
+        if (probabilite >= 50) return 'bg-warning';
+        return 'bg-secondary';
+    }
+
+    load();
+</script>
+{% endblock %}

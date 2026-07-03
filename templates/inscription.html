@@ -1,0 +1,383 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="toast-msg" id="toast"></div>
+
+<div class="container d-flex justify-content-center align-items-center py-4" style="min-height: 80vh;">
+    <div class="col-md-7 col-lg-5">
+        <div class="card-ocean p-4">
+            <div class="text-center mb-4">
+                <div style="font-size:3rem;">🌊</div>
+                <h2>Inscription</h2>
+                <p class="text-muted" id="inscription-subtitle">Choisissez votre profil pour commencer</p>
+            </div>
+
+            <!-- Étape 1 : Choix du rôle -->
+            <div id="step1">
+                <div class="row g-3 mb-4">
+                    <div class="col-6">
+                        <div class="role-card" onclick="selectRole('pecheur')" id="role-pecheur">
+                            <div class="icon">🎣</div>
+                            <h6>Pêcheur</h6>
+                            <small class="text-muted">Je veux vendre mes prises</small>
+                            <div class="mt-2">
+                                <span class="badge bg-warning text-dark">10 000 Ar/mois</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="role-card" onclick="selectRole('acheteur')" id="role-acheteur">
+                            <div class="icon">🏨</div>
+                            <h6>Acheteur</h6>
+                            <small class="text-muted">Je veux acheter du poisson</small>
+                            <div class="mt-2">
+                                <span class="badge bg-success">Gratuit</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-center text-muted small">
+                    ⚠️ Le rôle est <strong>définitif</strong>. Choisissez bien !
+                </p>
+            </div>
+
+            <!-- Étape 2 : Formulaire -->
+            <form id="registerForm" style="display:none;">
+                <!-- Indicateur de rôle -->
+                <div class="alert" id="role-alert" style="display:none;">
+                    <span id="role-icon"></span>
+                    <strong id="role-name"></strong>
+                </div>
+
+                <!-- Nom -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        <i class="bi bi-person"></i> Nom complet <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" class="form-control form-control-lg" id="nom" 
+                           placeholder="Ex: Hery Mahavita" required minlength="2">
+                </div>
+
+                <!-- Téléphone -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        <i class="bi bi-phone"></i> Téléphone <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text">+261</span>
+                        <input type="text" class="form-control form-control-lg" id="telephone" 
+                               placeholder="34 XX XXX XX" required pattern="[0-9]{10}" 
+                               maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                    </div>
+                    <small class="text-muted">10 chiffres, sans espaces</small>
+                </div>
+
+                <!-- Email -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        <i class="bi bi-envelope"></i> Email <small class="text-muted">(optionnel)</small>
+                    </label>
+                    <input type="email" class="form-control" id="email" 
+                           placeholder="exemple@email.mg">
+                </div>
+
+                <!-- Mot de passe -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        <i class="bi bi-lock"></i> Mot de passe <span class="text-danger">*</span>
+                    </label>
+                    <input type="password" class="form-control form-control-lg" id="password" 
+                           placeholder="Minimum 4 caractères" required minlength="4">
+                    <small class="text-muted">Minimum 4 caractères</small>
+                </div>
+
+                <!-- Confirmation mot de passe -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        <i class="bi bi-lock-fill"></i> Confirmer le mot de passe <span class="text-danger">*</span>
+                    </label>
+                    <input type="password" class="form-control form-control-lg" id="password_confirm" 
+                           placeholder="Répétez le mot de passe" required minlength="4">
+                    <small id="password-match" class="text-danger" style="display:none;">Les mots de passe ne correspondent pas</small>
+                </div>
+
+                <!-- Champs spécifiques PÊCHEUR -->
+                <div id="pecheur-fields" style="display:none;">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-info-circle"></i> 
+                        Après inscription, vous devrez souscrire un abonnement de <strong>10 000 Ar/mois</strong> pour publier vos prises.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-geo-alt"></i> Port de rattachement
+                        </label>
+                        <select class="form-select" id="port">
+                            <option value="">Choisir votre port...</option>
+                            <option value="Mahavatse">Mahavatse - Port principal</option>
+                            <option value="Mahajanga-by">Mahajanga-by</option>
+                            <option value="Saint-Augustin">Saint-Augustin</option>
+                            <option value="Anakao">Anakao</option>
+                            <option value="Salary">Salary</option>
+                            <option value="Ifaty">Ifaty</option>
+                            <option value="Mangarivotra">Mangarivotra</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-tools"></i> Type de pêche
+                        </label>
+                        <select class="form-select" id="typePeche">
+                            <option value="">Choisir votre technique...</option>
+                            <option value="Pirogue traditionnelle">🛶 Pirogue traditionnelle</option>
+                            <option value="Filet maillant">🎣 Filet maillant</option>
+                            <option value="Palangre">🪢 Palangre</option>
+                            <option value="Ligne à main">🎏 Ligne à main</option>
+                            <option value="Casier">🦀 Casier</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-clock-history"></i> Années d'expérience
+                        </label>
+                        <input type="number" class="form-control" id="experience" 
+                               placeholder="Ex: 5" min="0" max="60" value="0">
+                    </div>
+                </div>
+
+                <!-- Champs spécifiques ACHETEUR -->
+                <div id="acheteur-fields" style="display:none;">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 
+                        L'inscription acheteur est <strong>gratuite</strong>. Vous pouvez immédiatement parcourir le marché.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-building"></i> Type d'établissement
+                        </label>
+                        <select class="form-select" id="typeEtablissement">
+                            <option value="">Choisir...</option>
+                            <option value="Particulier">👤 Particulier</option>
+                            <option value="Restaurant">🍽️ Restaurant</option>
+                            <option value="Hotel">🏨 Hôtel</option>
+                            <option value="Supermarché">🏪 Supermarché</option>
+                            <option value="Revendeur">🔄 Revendeur</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-truck"></i> Adresse de livraison par défaut
+                        </label>
+                        <textarea class="form-control" id="adresse" rows="2" 
+                                  placeholder="Ex: Boulevard Gallieni, Centre-ville, Tuléar"></textarea>
+                    </div>
+                </div>
+
+                <!-- Conditions -->
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="conditions" required>
+                        <label class="form-check-label small" for="conditions">
+                            J'accepte les <a href="#" onclick="alert('Conditions d\'utilisation de Mada Océan')">conditions d'utilisation</a>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Boutons -->
+                <button type="submit" class="btn btn-green w-100 btn-lg" id="submitBtn">
+                    <i class="bi bi-person-plus"></i> S'inscrire
+                </button>
+                <button type="button" class="btn btn-outline-secondary w-100 mt-2" onclick="goBack()">
+                    <i class="bi bi-arrow-left"></i> Changer de rôle
+                </button>
+            </form>
+
+            <div class="text-center mt-3">
+                <a href="/connexion">Déjà un compte ? <strong>Se connecter</strong></a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+    .role-card {
+        cursor: pointer;
+        border: 3px solid #eee;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        transition: 0.3s;
+        height: 100%;
+    }
+    .role-card:hover {
+        border-color: #FF6B35;
+        transform: translateY(-3px);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    .role-card.selected {
+        border-color: #FF6B35;
+        background: #FFF5F0;
+    }
+    .role-card .icon {
+        font-size: 3rem;
+    }
+    .toast-msg {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+    }
+</style>
+
+<script>
+    let selectedRole = '';
+
+    function showToast(msg, type = 'success') {
+        const bg = type === 'success' ? 'bg-success' : 'bg-danger';
+        const icon = type === 'success' ? '✅' : '❌';
+        document.getElementById('toast').innerHTML = `
+            <div class="toast align-items-center text-white ${bg} border-0 show">
+                <div class="d-flex">
+                    <div class="toast-body fw-bold">${icon} ${msg}</div>
+                    <button class="btn-close btn-close-white me-2 m-auto" onclick="this.parentElement.parentElement.remove()"></button>
+                </div>
+            </div>`;
+        setTimeout(() => document.getElementById('toast').innerHTML = '', 5000);
+    }
+
+    function selectRole(role) {
+        selectedRole = role;
+        
+        // Mettre à jour les cartes
+        document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+        document.getElementById('role-' + role).classList.add('selected');
+        
+        // Cacher étape 1, afficher formulaire
+        document.getElementById('step1').style.display = 'none';
+        document.getElementById('registerForm').style.display = 'block';
+        
+        // Configurer selon le rôle
+        if (role === 'pecheur') {
+            document.getElementById('role-alert').style.display = 'block';
+            document.getElementById('role-alert').className = 'alert alert-warning';
+            document.getElementById('role-icon').textContent = '🎣';
+            document.getElementById('role-name').textContent = 'Inscription Pêcheur - Abonnement 10 000 Ar/mois requis';
+            document.getElementById('pecheur-fields').style.display = 'block';
+            document.getElementById('acheteur-fields').style.display = 'none';
+            document.getElementById('submitBtn').innerHTML = '<i class="bi bi-water"></i> S\'inscrire comme Pêcheur';
+            document.getElementById('submitBtn').className = 'btn btn-coral w-100 btn-lg';
+        } else {
+            document.getElementById('role-alert').style.display = 'block';
+            document.getElementById('role-alert').className = 'alert alert-info';
+            document.getElementById('role-icon').textContent = '🏨';
+            document.getElementById('role-name').textContent = 'Inscription Acheteur - Gratuit';
+            document.getElementById('pecheur-fields').style.display = 'none';
+            document.getElementById('acheteur-fields').style.display = 'block';
+            document.getElementById('submitBtn').innerHTML = '<i class="bi bi-building"></i> S\'inscrire comme Acheteur';
+            document.getElementById('submitBtn').className = 'btn btn-green w-100 btn-lg';
+        }
+        
+        document.getElementById('inscription-subtitle').textContent = 
+            role === 'pecheur' ? 'Inscription pêcheur' : 'Inscription acheteur';
+    }
+
+    function goBack() {
+        document.getElementById('step1').style.display = 'block';
+        document.getElementById('registerForm').style.display = 'none';
+        document.getElementById('role-alert').style.display = 'none';
+        selectedRole = '';
+        document.getElementById('inscription-subtitle').textContent = 'Choisissez votre profil pour commencer';
+    }
+
+    // Vérification mot de passe en temps réel
+    document.getElementById('password_confirm').addEventListener('input', function() {
+        const pwd = document.getElementById('password').value;
+        const confirm = this.value;
+        const matchMsg = document.getElementById('password-match');
+        
+        if (confirm && pwd !== confirm) {
+            matchMsg.style.display = 'block';
+        } else {
+            matchMsg.style.display = 'none';
+        }
+    });
+
+    // Soumission du formulaire
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Vérifier mots de passe
+        const pwd = document.getElementById('password').value;
+        const confirm = document.getElementById('password_confirm').value;
+        
+        if (pwd !== confirm) {
+            showToast('Les mots de passe ne correspondent pas', 'error');
+            return;
+        }
+        
+        if (!selectedRole) {
+            showToast('Veuillez sélectionner un rôle', 'error');
+            return;
+        }
+        
+        // Préparer les données
+        const data = {
+            nom: document.getElementById('nom').value.trim(),
+            prenom: '',
+            telephone: document.getElementById('telephone').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            mot_de_passe: pwd,
+            role: selectedRole
+        };
+        
+        // Ajouter champs spécifiques
+        if (selectedRole === 'pecheur') {
+            data.port = document.getElementById('port').value;
+            data.type_peche = document.getElementById('typePeche').value;
+            data.experience_ans = parseInt(document.getElementById('experience').value) || 0;
+        } else {
+            data.type_etablissement = document.getElementById('typeEtablissement').value;
+            data.adresse = document.getElementById('adresse').value.trim();
+        }
+        
+        // Désactiver le bouton
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Inscription...';
+        
+        try {
+            const res = await fetch('/api/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            
+            if (result.success) {
+                showToast(result.message, 'success');
+                setTimeout(() => {
+                    window.location.href = result.redirect || '/dashboard';
+                }, 1000);
+            } else {
+                showToast(result.message || 'Erreur d\'inscription', 'error');
+                btn.disabled = false;
+                btn.innerHTML = selectedRole === 'pecheur' ? 
+                    '<i class="bi bi-water"></i> S\'inscrire comme Pêcheur' : 
+                    '<i class="bi bi-building"></i> S\'inscrire comme Acheteur';
+            }
+        } catch (err) {
+            showToast('Erreur de connexion au serveur', 'error');
+            btn.disabled = false;
+            btn.innerHTML = selectedRole === 'pecheur' ? 
+                '<i class="bi bi-water"></i> S\'inscrire comme Pêcheur' : 
+                '<i class="bi bi-building"></i> S\'inscrire comme Acheteur';
+        }
+    });
+</script>
+{% endblock %}

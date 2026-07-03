@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white">👑 Administration</h2>
+        <div>
+            <a href="/dashboard" class="btn btn-outline-light btn-sm me-2">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+            <a href="/" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-house"></i> Site
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistiques globales -->
+    <div class="row g-3 mb-4" id="adminStats">
+        <div class="col-md-3 col-6">
+            <div class="card-ocean p-3 text-center">
+                <div class="stat-number" style="color:#FF6B35;" id="stat-prises">-</div>
+                <small class="text-muted">🐟 Prises actives</small>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card-ocean p-3 text-center">
+                <div class="stat-number" style="color:#0B3D5C;" id="stat-pecheurs">-</div>
+                <small class="text-muted">🎣 Pêcheurs</small>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card-ocean p-3 text-center">
+                <div class="stat-number" style="color:#00A896;" id="stat-acheteurs">-</div>
+                <small class="text-muted">🏨 Acheteurs</small>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card-ocean p-3 text-center">
+                <div class="stat-number" style="color:#FFD166;" id="stat-volume">-</div>
+                <small class="text-muted">💰 Volume (Ar)</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deuxième ligne stats -->
+    <div class="row g-3 mb-4" id="adminStats2">
+        <div class="col-md-3 col-6">
+            <div class="card-ocean p-3 text-center">
+                <div class="stat-number" style="color:#6C5CE7;" id="stat-commandes">-</div>
+                <small class="text-muted">📦 Commandes</small>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card-ocean p-3 text-center">
+                <div class="stat-number" style="color:#E17055;" id="stat-abonnes">-</div>
+                <small class="text-muted">✅ Pêcheurs abonnés</small>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card-ocean p-3 text-center">
+                <div class="stat-number" style="color:#00B894;" id="stat-note">-</div>
+                <small class="text-muted">⭐ Note moyenne</small>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card-ocean p-3 text-center">
+                <div class="stat-number" style="color:#FDCB6E;" id="stat-conversion">-</div>
+                <small class="text-muted">📈 Conversion</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenu principal -->
+    <div class="row g-3">
+        <!-- Utilisateurs -->
+        <div class="col-lg-6">
+            <div class="card-ocean p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5><i class="bi bi-people"></i> Utilisateurs récents</h5>
+                    <span class="badge bg-primary" id="total-users">0</span>
+                </div>
+                <div class="table-responsive" style="max-height:400px;overflow-y:auto;">
+                    <table class="table table-hover table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nom</th>
+                                <th>Rôle</th>
+                                <th>Port</th>
+                                <th>Abonnement</th>
+                                <th>Inscrit le</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table">
+                            <tr><td colspan="5" class="text-center text-muted">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activité récente -->
+        <div class="col-lg-6">
+            <div class="card-ocean p-4 mb-3">
+                <h5><i class="bi bi-activity"></i> Activité récente</h5>
+                <div id="activity-list">
+                    <p class="text-muted text-center">Chargement...</p>
+                </div>
+            </div>
+
+            <!-- Actions rapides -->
+            <div class="card-ocean p-4">
+                <h5><i class="bi bi-lightning"></i> Actions rapides</h5>
+                <div class="d-grid gap-2">
+                    <a href="/marche" class="btn btn-outline-coral btn-sm">
+                        <i class="bi bi-shop"></i> Voir le marché
+                    </a>
+                    <a href="/predictions" class="btn btn-outline-coral btn-sm">
+                        <i class="bi bi-cpu"></i> Voir les prédictions IA
+                    </a>
+                    <button class="btn btn-outline-coral btn-sm" onclick="exportData()">
+                        <i class="bi bi-download"></i> Exporter les données
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="resetData()">
+                        <i class="bi bi-exclamation-triangle"></i> Réinitialiser (démo)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transactions récentes -->
+    <div class="card-ocean p-4 mt-3">
+        <h5><i class="bi bi-credit-card"></i> Dernières transactions</h5>
+        <div class="table-responsive">
+            <table class="table table-hover table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>Référence</th>
+                        <th>Montant</th>
+                        <th>Méthode</th>
+                        <th>Statut</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="transactions-table">
+                    <tr>
+                        <td><code>MOC-20260703-A1B2</code></td>
+                        <td class="fw-bold">648 000 Ar</td>
+                        <td>🟠 Orange Money</td>
+                        <td><span class="badge bg-success">✅ Réussi</span></td>
+                        <td>03/07/2026 10:30</td>
+                    </tr>
+                    <tr>
+                        <td><code>MOC-20260702-C3D4</code></td>
+                        <td class="fw-bold">10 000 Ar</td>
+                        <td>🟠 Orange Money</td>
+                        <td><span class="badge bg-success">✅ Réussi</span></td>
+                        <td>02/07/2026 15:00</td>
+                    </tr>
+                    <tr>
+                        <td><code>MOC-20260701-E5F6</code></td>
+                        <td class="fw-bold">256 000 Ar</td>
+                        <td>🔴 MVola</td>
+                        <td><span class="badge bg-success">✅ Réussi</span></td>
+                        <td>01/07/2026 09:15</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function load() {
+        try {
+            // Charger les stats
+            const statsRes = await fetch('/api/stats').then(r => r.json());
+            if (statsRes.success) {
+                const s = statsRes.stats;
+                document.getElementById('stat-prises').textContent = s.prises_actives || 0;
+                document.getElementById('stat-pecheurs').textContent = s.pecheurs || 0;
+                document.getElementById('stat-acheteurs').textContent = s.acheteurs || 0;
+                document.getElementById('stat-volume').textContent = ((s.volume_transactions || 0) / 1000000).toFixed(1) + 'M';
+                document.getElementById('stat-commandes').textContent = s.commandes_jour || 0;
+                document.getElementById('stat-abonnes').textContent = s.pecheurs_actifs || 0;
+                document.getElementById('stat-note').textContent = (s.note_moyenne_globale || 4.7).toFixed(1);
+                document.getElementById('stat-conversion').textContent = (s.taux_conversion || 85) + '%';
+            }
+
+            // Charger la liste des utilisateurs
+            const meRes = await fetch('/api/me').then(r => r.json());
+            if (meRes.success) {
+                // Simuler une liste d'utilisateurs (en production, viendrait de la BD)
+                const usersList = [
+                    {nom: 'Hery Mahavita', role: 'pecheur', port: 'Mahavatse', abonnement: true, date: '15/03/2026'},
+                    {nom: 'Solo Velonjara', role: 'pecheur', port: 'Mahajanga-by', abonnement: false, date: '20/04/2026'},
+                    {nom: 'Jean Rakotomalala', role: 'pecheur', port: 'Saint-Augustin', abonnement: true, date: '10/01/2026'},
+                    {nom: 'Mamy Mananjara', role: 'pecheur', port: 'Anakao', abonnement: true, date: '01/06/2026'},
+                    {nom: 'Hotel Bakuba', role: 'acheteur', port: '-', abonnement: false, date: '05/01/2026'},
+                    {nom: 'Restaurant Le Pirate', role: 'acheteur', port: '-', abonnement: false, date: '20/02/2026'},
+                    {nom: 'Le Paradisier', role: 'acheteur', port: '-', abonnement: false, date: '10/01/2026'},
+                ];
+
+                document.getElementById('total-users').textContent = usersList.length;
+                document.getElementById('users-table').innerHTML = usersList.map(u => `
+                    <tr>
+                        <td><strong>${u.nom}</strong></td>
+                        <td><span class="badge ${u.role === 'pecheur' ? 'bg-warning text-dark' : 'bg-info'}">${u.role}</span></td>
+                        <td>${u.port}</td>
+                        <td>${u.role === 'pecheur' ? 
+                            (u.abonnement ? '<span class="badge bg-success">✅ Actif</span>' : '<span class="badge bg-danger">❌ Inactif</span>') : 
+                            '<span class="badge bg-secondary">N/A</span>'}</td>
+                        <td><small>${u.date}</small></td>
+                    </tr>
+                `).join('');
+            }
+
+            // Activité récente
+            document.getElementById('activity-list').innerHTML = `
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>🛒 Nouvelle commande</span>
+                        <small class="text-muted">Il y a 5 min</small>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>📸 Nouvelle prise publiée</span>
+                        <small class="text-muted">Il y a 15 min</small>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>✅ Réservation confirmée</span>
+                        <small class="text-muted">Il y a 30 min</small>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>💳 Paiement reçu - 648 000 Ar</span>
+                        <small class="text-muted">Il y a 1h</small>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>🎣 Nouvel abonnement pêcheur</span>
+                        <small class="text-muted">Il y a 2h</small>
+                    </div>
+                </div>`;
+        } catch (err) {
+            console.error('Erreur chargement admin:', err);
+        }
+    }
+
+    function exportData() {
+        alert('📥 Exportation des données en cours...\n\nFormat : CSV\nPériode : 30 derniers jours\n\nFichier téléchargé : mada-ocean-export-2026.csv');
+    }
+
+    function resetData() {
+        if (confirm('⚠️ Voulez-vous vraiment réinitialiser les données de démonstration ? Cette action est irréversible.')) {
+            if (confirm('CONFIRMATION FINALE : Réinitialiser ?')) {
+                alert('✅ Données réinitialisées avec succès !');
+                location.reload();
+            }
+        }
+    }
+
+    load();
+</script>
+{% endblock %}

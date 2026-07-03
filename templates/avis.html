@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avis - Mada Océan</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root { --ocean-dark: #0B3D5C; --coral: #FF6B35; --green: #00A896; --gold: #FFD166; }
+        body { background: linear-gradient(135deg, #0B3D5C 0%, #006494 100%); min-height: 100vh; font-family: 'Segoe UI', sans-serif; }
+        .card-ocean { background: white; border-radius: 20px; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.15); }
+        .stars { color: #FFD166; font-size: 1.5rem; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark" style="background: rgba(11,61,92,0.95);">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="/">🌊 Mada Océan</a>
+            <div><a href="/dashboard" class="btn btn-outline-light btn-sm">Dashboard</a></div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h2 class="text-white mb-4">⭐ Avis et Évaluations</h2>
+        
+        <div class="card-ocean p-4 mb-4">
+            <h5>Donner un avis</h5>
+            <form id="avisForm">
+                <div class="mb-3">
+                    <label class="form-label">👤 Pour qui ?</label>
+                    <select class="form-select" id="toUser">
+                        <option value="1">Hery Mahavita (Pêcheur)</option>
+                        <option value="3">Jean Rakotomalala (Pêcheur)</option>
+                        <option value="4">Mamy Mananjara (Pêcheur)</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">⭐ Note</label>
+                    <div id="stars">
+                        <span onclick="setNote(1)" class="stars">☆</span>
+                        <span onclick="setNote(2)" class="stars">☆</span>
+                        <span onclick="setNote(3)" class="stars">☆</span>
+                        <span onclick="setNote(4)" class="stars">☆</span>
+                        <span onclick="setNote(5)" class="stars">☆</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <textarea class="form-control" id="commentaire" placeholder="Votre commentaire..."></textarea>
+                </div>
+                <button class="btn btn-coral" style="background:#FF6B35;color:white;border:none;padding:10px 20px;border-radius:10px;">Publier l'avis</button>
+            </form>
+        </div>
+
+        <div id="listeAvis"></div>
+    </div>
+
+    <script>
+        let selectedNote = 5;
+        
+        function setNote(n) {
+            selectedNote = n;
+            const stars = document.querySelectorAll('#stars span');
+            stars.forEach((s, i) => s.textContent = i < n ? '★' : '☆');
+        }
+        
+        document.getElementById('avisForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await fetch('/api/avis', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({
+                    to_id: parseInt(document.getElementById('toUser').value),
+                    note: selectedNote,
+                    commentaire: document.getElementById('commentaire').value
+                })
+            });
+            location.reload();
+        });
+        
+        async function load() {
+            const res = await fetch('/api/avis').then(r=>r.json());
+            document.getElementById('listeAvis').innerHTML = res.avis.map(a => `
+                <div class="card-ocean p-3 mb-2">
+                    <div class="d-flex justify-content-between">
+                        <strong>${a.from_nom}</strong>
+                        <span class="stars">${'★'.repeat(a.note)}${'☆'.repeat(5-a.note)}</span>
+                    </div>
+                    <p class="mt-2">${a.commentaire}</p>
+                    <small class="text-muted">${a.date}</small>
+                </div>
+            `).join('');
+        }
+        
+        setNote(5);
+        load();
+    </script>
+</body>
+</html> 

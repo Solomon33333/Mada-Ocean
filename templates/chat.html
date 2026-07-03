@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row g-3">
+        <!-- Colonne contacts -->
+        <div class="col-md-4">
+            <div class="card-ocean p-0" style="overflow:hidden;">
+                <div class="p-3" style="background:#0B3D5C;color:white;">
+                    <h5 class="mb-0"><i class="bi bi-chat-dots"></i> Conversations</h5>
+                </div>
+                <div class="p-2" style="max-height:500px;overflow-y:auto;" id="contacts-list">
+                    <div class="text-center text-muted py-3">
+                        <div class="loading-spinner mx-auto" style="width:30px;height:30px;border-width:3px;"></div>
+                        <small>Chargement...</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne messages -->
+        <div class="col-md-8">
+            <div class="card-ocean p-0" style="overflow:hidden;">
+                <!-- En-tête conversation -->
+                <div class="p-3 d-flex align-items-center gap-3" style="background:#0B3D5C;color:white;" id="chat-header">
+                    <div style="font-size:2rem;" id="contact-avatar">💬</div>
+                    <div>
+                        <h6 class="mb-0" id="contact-name">Sélectionnez une conversation</h6>
+                        <small class="text-white-50" id="contact-role"></small>
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                <div class="p-3" style="height:400px;overflow-y:auto;background:#f8f9fa;" id="messages">
+                    <div class="text-center text-muted py-5">
+                        <div style="font-size:4rem;">💬</div>
+                        <p>Sélectionnez un contact pour commencer</p>
+                    </div>
+                </div>
+
+                <!-- Zone de saisie -->
+                <div class="p-3 border-top" id="chat-input-area">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="msgInput" 
+                               placeholder="Écrivez votre message..." disabled>
+                        <button class="btn btn-coral" onclick="sendMsg()" disabled id="sendBtn">
+                            <i class="bi bi-send"></i> Envoyer
+                        </button>
+                    </div>
+                    <small class="text-muted">Appuyez sur Entrée pour envoyer</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    //let currentUser = null;
+    let conversations = [];
+    let activeConversation = null;
+
+    // Contacts disponibles
+    const contacts = {
+        1: {nom: 'Hery Mahavita', role: 'pecheur', avatar: '🎣', telephone: '0341234567'},
+        2: {nom: 'Solo Velonjara', role: 'pecheur', avatar: '🎣', telephone: '0342345678'},
+        3: {nom: 'Jean Rakotomalala', role: 'pecheur', avatar: '🎣', telephone: '0343456789'},
+        4: {nom: 'Mamy Mananjara', role: 'pecheur', avatar: '🎣', telephone: '0344567890'},
+        10: {nom: 'Hotel Bakuba', role: 'acheteur', avatar: '🏨', telephone: '0341231234'},
+        11: {nom: 'Restaurant Le Pirate', role: 'acheteur', avatar: '🍽️', telephone: '0342342345'},
+        12: {nom: 'Le Paradisier', role: 'acheteur', avatar: '🏩', telephone: '0343453456'},
+    };
+
+    async function init() {
+        // Charger l'utilisateur
+        const me = await fetch('/api/me').then(r => r.json());
+        if (!me.success) {
+            window.location.href = '/connexion?redirect=/chat';
+            return;
+        }
+        currentUser = me.user;
+
+        // Construire la liste des contacts (exclure soi-même)
+        conversations = [];
+        for (const [id, contact] of Object.entries(contacts)) {
+            if (parseInt(id) !== currentUser.id) {
+                // Vérifier s'il y a des messages avec ce contact
+                const res = await fetch(`/api/messages?with=${id}`).then(r => r.json());
+                const lastMsg = res.success && res.messages.length > 0 ? 
+                    res.messages[res.messages.length - 1] : null;
+                
+                conversations.push({
+                    id: parseInt(id),
+                    ...contact,
+                    lastMessage: lastMsg ? lastMsg.message.substring(0, 50) : null,
+                    lastDate: lastMsg ? lastMsg.date : null,
+                    unread: res.success ? res.messages.filter(m => !m.lu && m.from_id !== currentUser.id).length : 0
+                });
+            }
+        }
+
+        // Trier : messages récents d'abord
+        conversations.sort((a, b) => {
+            if (!a.lastDate && !b.lastDate) return 0;
+            if (!a.lastDate) return 1;
+            if (!b.lastDate) return -1;
+            return new Date(b.lastDate) - new Date(a.lastDate);
+        });
+
+        afficherContacts();
+        loadMessages();
+    }
+
+    function afficherContacts() {
+        if (conversations.length === 0) {
+            document.getElementById('contacts-list').innerHTML = `
+                <div class="text-center text-muted py-3">
+                    <small>Aucune conversation</small>
+                </div>`;
+            return;
+        }
+
+        document.getElementById('contacts-list').innerHTML = conversations.map(c => `
+            <div class="contact-item p-3 ${activeConversation && activeConversation.id === c.id ? 'active' : ''}" 
+                 onclick="selectConversation(${c.id})" style="cursor:pointer;">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size:1.8rem;">${c.avatar}</span>
+                    <div class="flex-grow-1">
+                        <strong>${c.nom}</strong>
+                        <br><small class="text-muted">${c.lastMessage || 'Aucun message'}</small>
+                    </div>
+                    <div class="text-end">
+                        ${c.unread > 0 ? `<span class="badge bg-danger">${c.unread}</span>` : ''}
+                        ${c.lastDate ? `<br><small class="text-muted">${c.lastDate}</small>` : ''}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function selectConversation(contactId) {
+        const contact = conversations.find(c => c.id === contactId);
+        if (!contact) return;
+
+        activeConversation = contact;
+        contact.unread = 0;
+
+        // Mettre à jour l'en-tête
+        document.getElementById('contact-avatar').textContent = contact.avatar;
+        document.getElementById('contact-name').textContent = contact.nom;
+        document.getElementById('contact-role').textContent = 
+            contact.role === 'pecheur' ? '🎣 Pêcheur' : '🏨 Acheteur';
+
+        // Activer la saisie
+        document.getElementById('msgInput').disabled = false;
+        document.getElementById('sendBtn').disabled = false;
+        document.getElementById('msgInput').focus();
+
+        // Mettre à jour la liste
+        afficherContacts();
+        
+        // Charger les messages
+        loadMessages();
+    }
+
+    async function loadMessages() {
+        if (!activeConversation) return;
+
+        const res = await fetch(`/api/messages?with=${activeConversation.id}`).then(r => r.json());
+        
+        if (res.success) {
+            if (res.messages.length === 0) {
+                document.getElementById('messages').innerHTML = `
+                    <div class="text-center text-muted py-5">
+                        <div style="font-size:3rem;">👋</div>
+                        <p>Démarrez la conversation avec ${activeConversation.nom}</p>
+                        <small>Vos messages sont privés et sécurisés</small>
+                    </div>`;
+            } else {
+                document.getElementById('messages').innerHTML = res.messages.map(m => `
+                    <div class="mb-2 ${m.from_id === currentUser.id ? 'text-end' : ''}">
+                        ${m.from_id !== currentUser.id ? 
+                            `<small class="text-muted ms-2">${activeConversation.avatar} ${activeConversation.nom}</small>` : 
+                            '<small class="text-muted me-2">Vous</small>'}
+                        <div class="d-inline-block ${m.from_id === currentUser.id ? 'msg-sent' : 'msg-received'}" 
+                             style="max-width:75%;">
+                            <div>${m.message}</div>
+                            <small class="${m.from_id === currentUser.id ? 'text-white-50' : 'text-muted'}">${m.date}</small>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            // Scroll en bas
+            const msgDiv = document.getElementById('messages');
+            msgDiv.scrollTop = msgDiv.scrollHeight;
+        }
+    }
+
+    async function sendMsg() {
+        if (!activeConversation) return;
+        
+        const msg = document.getElementById('msgInput').value.trim();
+        if (!msg) return;
+
+        // Envoyer le message
+        await fetch('/api/messages', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                to_id: activeConversation.id,
+                message: msg
+            })
+        });
+
+        // Mettre à jour le dernier message dans la conversation
+        const conv = conversations.find(c => c.id === activeConversation.id);
+        if (conv) {
+            conv.lastMessage = msg.substring(0, 50);
+            conv.lastDate = new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+        }
+
+        document.getElementById('msgInput').value = '';
+        afficherContacts();
+        loadMessages();
+    }
+
+    // Envoyer avec Entrée
+    document.getElementById('msgInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            sendMsg();
+        }
+    });
+
+    // Rafraîchir les messages toutes les 5 secondes
+    setInterval(() => {
+        if (activeConversation) loadMessages();
+    }, 5000);
+
+    // Initialiser
+    init();
+
+    // Ajouter styles
+    const style = document.createElement('style');
+    style.textContent = `
+        .msg-sent {
+            background: #0B3D5C;
+            color: white;
+            border-radius: 15px 15px 5px 15px;
+            padding: 10px 15px;
+            max-width: 75%;
+        }
+        .msg-received {
+            background: white;
+            border-radius: 15px 15px 15px 5px;
+            padding: 10px 15px;
+            max-width: 75%;
+            border: 1px solid #eee;
+        }
+        .contact-item {
+            transition: all 0.2s;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .contact-item:hover {
+            background: #f8f9fa;
+        }
+        .contact-item.active {
+            background: #e8f4f8;
+            border-left: 3px solid #FF6B35;
+        }
+    `;
+    document.head.appendChild(style);
+</script>
+{% endblock %}

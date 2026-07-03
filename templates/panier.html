@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-white mb-4">🛒 Mon Panier</h2>
+    <div id="panier-content">
+        <div class="text-center text-white py-5">
+            <div class="loading-spinner mx-auto"></div>
+            <p class="mt-3">Chargement du panier...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let fraisLivraison = {};
+
+    async function loadPanier() {
+        try {
+            // Charger les frais de livraison avec gestion d'erreur
+            try {
+                const fraisRes = await fetch('/api/livraison/frais');
+                if (fraisRes.ok) {
+                    const fraisData = await fraisRes.json();
+                    if (fraisData.success) {
+                        fraisLivraison = fraisData.frais;
+                    }
+                } else {
+                    console.warn('API frais livraison non disponible, utilisation valeurs par défaut');
+                    fraisLivraison = {
+                        'Mahavatse': 3000,
+                        'Centre-ville': 5000,
+                        'Anakao': 10000,
+                        'Ifaty': 12000,
+                        'Salary': 15000,
+                        'Saint-Augustin': 8000,
+                        'Mangarivotra': 4000,
+                        'Tuléar': 5000
+                    };
+                }
+            } catch (e) {
+                console.warn('Frais livraison par défaut:', e);
+                fraisLivraison = {
+                    'Tuléar': 5000,
+                    'Anakao': 10000,
+                    'Ifaty': 12000
+                };
+            }
+            
+            // Charger le panier
+            const res = await fetch('/api/panier').then(r => r.json());
+            
+            if (res.success && res.panier.length > 0) {
+                afficherPanier(res);
+            } else {
+                document.getElementById('panier-content').innerHTML = `
+                    <div class="card-ocean p-5 text-center">
+                        <div style="font-size:5rem;">🛒</div>
+                        <h4>Votre panier est vide</h4>
+                        <p class="text-muted">Ajoutez des produits depuis le marché</p>
+                        <a href="/marche" class="btn btn-coral mt-3">Voir le marché</a>
+                    </div>`;
+            }
+        } catch (err) {
+            console.error('Erreur chargement panier:', err);
+            document.getElementById('panier-content').innerHTML = `
+                <div class="card-ocean p-5 text-center">
+                    <div style="font-size:5rem;">❌</div>
+                    <h5>Erreur de chargement</h5>
+                    <p class="text-muted">${err.message}</p>
+                    <a href="/marche" class="btn btn-coral mt-3">Retour au marché</a>
+                </div>`;
+        }
+    }
+
+    function afficherPanier(res) {
+        let html = res.panier.map((item) => `
+            <div class="card-ocean p-3 mb-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3">
+                        <span style="font-size:2rem;">${item.icon}</span>
+                        <div>
+                            <strong>${item.espece}</strong>
+                            <br><small class="text-muted">${item.pecheur_nom || ''} | ${item.port || ''}</small>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div>${item.quantite_kg} kg × ${(item.prix_kg || 0).toLocaleString()} Ar</div>
+                        <strong>${(item.prix_total || 0).toLocaleString()} Ar</strong>
+                    </div>
+                    <button class="btn btn-outline-danger btn-sm" onclick="retirer(${item.prise_id})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+        
+        // Résumé
+        html += `
+            <div class="card-ocean p-4 mt-3">
+                <h5>📋 Résumé de la commande</h5>
+                <div class="d-flex justify-content-between">
+                    <span>Sous-total (${res.nb_articles} article(s))</span>
+                    <strong>${(res.total || 0).toLocaleString()} Ar</strong>
+                </div>
+                
+                <div class="mb-3 mt-3">
+                    <label class="form-label fw-bold">🚚 Mode de livraison</label>
+                    <select class="form-select" id="mode-livraison" onchange="updateTotal(${res.total || 0})">
+                        <option value="retrait">🏪 Retrait au port (gratuit)</option>
+                        <option value="livraison">🛵 Livraison à domicile</option>
+                    </select>
+                </div>
+                
+                <div id="livraison-details" style="display:none;">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">📍 Zone de livraison</label>
+                        <select class="form-select" id="zone-livraison" onchange="updateTotal(${res.total || 0})">
+                            ${Object.keys(fraisLivraison).length > 0 ? 
+                                Object.entries(fraisLivraison).map(([zone, cout]) => 
+                                    `<option value="${zone}">${zone} - ${(cout || 0).toLocaleString()} Ar</option>`
+                                ).join('') :
+                                '<option value="Tuléar">Tuléar - 5 000 Ar</option>'
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">📝 Adresse précise</label>
+                        <textarea class="form-control" id="adresse-livraison" rows="2" 
+                                  placeholder="Ex: Boulevard Gallieni, près de la poste, Tuléar"></textarea>
+                    </div>
+                </div>
+                
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <span>Frais de livraison</span>
+                    <strong id="frais-livraison">Gratuit</strong>
+                </div>
+                <div class="d-flex justify-content-between mt-2 fs-5">
+                    <strong>Total</strong>
+                    <strong id="total-commande" style="color:#FF6B35;">${(res.total || 0).toLocaleString()} Ar</strong>
+                </div>
+                
+                <button class="btn btn-green w-100 btn-lg mt-3" onclick="commander()">
+                    ✅ Commander maintenant
+                </button>
+                
+                <a href="/marche" class="btn btn-outline-secondary w-100 mt-2">
+                    ← Continuer mes achats
+                </a>
+            </div>
+        `;
+        
+        document.getElementById('panier-content').innerHTML = html;
+    }
+
+    function updateTotal(sousTotal) {
+        const mode = document.getElementById('mode-livraison')?.value;
+        const zone = document.getElementById('zone-livraison')?.value;
+        
+        const livraisonDetails = document.getElementById('livraison-details');
+        if (livraisonDetails) {
+            livraisonDetails.style.display = mode === 'livraison' ? 'block' : 'none';
+        }
+        
+        let frais = 0;
+        if (mode === 'livraison' && zone && fraisLivraison[zone]) {
+            frais = fraisLivraison[zone];
+        }
+        
+        const fraisElement = document.getElementById('frais-livraison');
+        if (fraisElement) {
+            fraisElement.textContent = frais === 0 ? 'Gratuit' : (frais || 0).toLocaleString() + ' Ar';
+        }
+        
+        const totalElement = document.getElementById('total-commande');
+        if (totalElement) {
+            totalElement.textContent = ((sousTotal || 0) + frais).toLocaleString() + ' Ar';
+        }
+    }
+
+    async function retirer(priseId) {
+        await fetch('/api/panier/supprimer', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({prise_id: priseId})
+        });
+        loadPanier();
+    }
+
+    async function commander() {
+        const adresse = document.getElementById('adresse-livraison')?.value || 
+                        document.getElementById('zone-livraison')?.value || 'Tuléar';
+        
+        try {
+            const res = await fetch('/api/commandes/creer', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({adresse_livraison: adresse})
+            }).then(r => r.json());
+            
+            if (res.success) {
+                alert(res.message);
+                window.location.href = '/commandes';
+            } else {
+                alert('❌ ' + (res.message || 'Erreur'));
+            }
+        } catch (err) {
+            alert('❌ Erreur lors de la commande');
+        }
+    }
+
+    loadPanier();
+</script>
+{% endblock %}

@@ -1,0 +1,497 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- En-tête -->
+            <div class="text-center mb-4">
+                <h2 class="text-white">💳 Paiement Sécurisé</h2>
+                <p class="text-white-50">Choisissez votre méthode de paiement</p>
+            </div>
+
+            <div class="row g-4">
+                <!-- Colonne gauche : Méthodes de paiement -->
+                <div class="col-md-7">
+                    <!-- Sélecteur de méthode -->
+                    <div class="card-ocean p-4 mb-3">
+                        <h5 class="mb-3">Méthode de paiement</h5>
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <div class="card p-3 text-center payment-method active" id="method-orange" 
+                                     onclick="selectMethod('orange')" style="cursor:pointer; border:2px solid #FF6B35;">
+                                    <div style="font-size:2rem;">🟠</div>
+                                    <small class="fw-bold">Orange Money</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="card p-3 text-center payment-method" id="method-mvola" 
+                                     onclick="selectMethod('mvola')" style="cursor:pointer; border:2px solid #ddd;">
+                                    <div style="font-size:2rem;">🔴</div>
+                                    <small class="fw-bold">MVola</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="card p-3 text-center payment-method" id="method-airtel" 
+                                     onclick="selectMethod('airtel')" style="cursor:pointer; border:2px solid #ddd;">
+                                    <div style="font-size:2rem;">🔵</div>
+                                    <small class="fw-bold">Airtel Money</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formulaire de paiement -->
+                    <div class="card-ocean p-4">
+                        <!-- Étape 1 : Saisie -->
+                        <div id="step1">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">📱 Numéro de téléphone</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">+261</span>
+                                    <input type="text" class="form-control form-control-lg" id="phone" 
+                                           placeholder="34 XX XXX XX" value="0341234567">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">💰 Montant à payer</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control form-control-lg" id="montant" 
+                                           value="50000" min="100" step="100">
+                                    <span class="input-group-text">Ar</span>
+                                </div>
+                                <div class="mt-2 d-flex gap-2 flex-wrap">
+                                    <button class="btn btn-outline-coral btn-sm" onclick="setMontant(5000)">5 000 Ar</button>
+                                    <button class="btn btn-outline-coral btn-sm" onclick="setMontant(10000)">10 000 Ar</button>
+                                    <button class="btn btn-outline-coral btn-sm" onclick="setMontant(50000)">50 000 Ar</button>
+                                    <button class="btn btn-outline-coral btn-sm" onclick="setMontant(100000)">100 000 Ar</button>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">📝 Motif du paiement</label>
+                                <select class="form-select" id="motif">
+                                    <option value="Achat poisson">🐟 Achat de poisson</option>
+                                    <option value="Abonnement pêcheur">🎣 Abonnement pêcheur</option>
+                                    <option value="Livraison">🚚 Frais de livraison</option>
+                                    <option value="Commande">📦 Commande</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-coral w-100 btn-lg" onclick="initierPaiement()">
+                                <i class="bi bi-phone"></i> Payer avec <span id="method-name">Orange Money</span>
+                            </button>
+                        </div>
+
+                        <!-- Étape 2 : Confirmation -->
+                        <div id="step2" style="display:none;">
+                            <div class="alert alert-info">
+                                <h6><i class="bi bi-shield-check"></i> Confirmez le paiement</h6>
+                                <hr>
+                                <p class="mb-1"><strong>Méthode :</strong> <span id="confirm-method"></span></p>
+                                <p class="mb-1"><strong>Numéro :</strong> +261 <span id="confirm-phone"></span></p>
+                                <p class="mb-1"><strong>Montant :</strong> <span id="confirm-amount"></span> Ar</p>
+                                <p class="mb-1"><strong>Motif :</strong> <span id="confirm-motif"></span></p>
+                                <p class="mb-0"><strong>Code secret :</strong> <span id="confirm-code" class="text-success fw-bold fs-5"></span></p>
+                            </div>
+                            <p class="text-muted small text-center">
+                                ⏱️ Ce code expire dans 5 minutes<br>
+                                📱 Vous recevrez une notification de confirmation
+                            </p>
+                        </div>
+
+                        <!-- Étape 3 : Succès -->
+                        <div id="step3" style="display:none;">
+                            <div class="text-center">
+                                <div style="font-size:5rem;">🎉</div>
+                                <h4 class="text-success" id="result-msg"></h4>
+                                <div class="ticket p-3 mt-3" style="border:2px dashed #00A896; border-radius:10px;">
+                                    <p class="mb-1"><strong>Référence :</strong> <code id="result-ref"></code></p>
+                                    <p class="mb-1"><strong>Montant :</strong> <span id="result-amount"></span> Ar</p>
+                                    <p class="mb-0"><strong>Date :</strong> <span id="result-date"></span></p>
+                                </div>
+                                <div class="mt-3 d-flex gap-2 justify-content-center">
+                                    <a href="/dashboard" class="btn btn-green">Dashboard</a>
+                                    <button class="btn btn-outline-coral" onclick="resetPaiement()">Nouveau paiement</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Colonne droite : Simulateur téléphone -->
+                <div class="col-md-5">
+                    <div class="card-ocean p-3">
+                        <h6 class="text-center mb-3">📱 Simulateur <span id="simulator-title">Orange Money</span></h6>
+                        
+                        <div class="phone-simulator">
+                            <div class="phone-screen">
+                                <div class="phone-header">
+                                    <span class="operator" id="sim-operator">Orange Money</span>
+                                    <span class="time" id="phone-time">10:30</span>
+                                </div>
+                                <div class="ussd-screen" id="ussd-screen">
+                                    <!-- Menu USSD -->
+                                    <div id="ussd-menu">
+                                        <div class="ussd-title">ORANGE MONEY</div>
+                                        <div class="ussd-item" onclick="ussdAction('send')">
+                                            <span class="ussd-num">1</span> Envoyer de l'argent
+                                        </div>
+                                        <div class="ussd-item" onclick="ussdAction('pay')">
+                                            <span class="ussd-num">2</span> Payer un marchand
+                                        </div>
+                                        <div class="ussd-item" onclick="ussdAction('credit')">
+                                            <span class="ussd-num">3</span> Acheter du crédit
+                                        </div>
+                                        <div class="ussd-item" onclick="ussdAction('balance')">
+                                            <span class="ussd-num">4</span> Consulter mon solde
+                                        </div>
+                                        <div class="ussd-item" onclick="ussdAction('confirm')">
+                                            <span class="ussd-num">5</span> Confirmer un paiement
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Écran code -->
+                                    <div id="ussd-code-screen" style="display:none;">
+                                        <div class="ussd-title">CONFIRMER PAIEMENT</div>
+                                        <p class="text-center">Entrez le code secret :</p>
+                                        <input type="text" class="ussd-input" id="ussd-code-input" 
+                                               placeholder="______" maxlength="6">
+                                        <button class="ussd-btn" onclick="ussdConfirmCode()">Valider</button>
+                                        <button class="ussd-btn ussd-cancel" onclick="ussdBack()">Annuler</button>
+                                    </div>
+                                    
+                                    <!-- Écran succès -->
+                                    <div id="ussd-success-screen" style="display:none;">
+                                        <div class="ussd-title" style="background:#00A896;">✅ SUCCÈS</div>
+                                        <p class="text-center fw-bold text-success">Paiement effectué !</p>
+                                        <p class="text-center small" id="ussd-ref"></p>
+                                        <p class="text-center fw-bold fs-5" id="ussd-amount"></p>
+                                        <button class="ussd-btn" onclick="ussdReset()">Retour au menu</button>
+                                    </div>
+                                </div>
+                                <div class="ussd-footer">
+                                    <span id="ussd-hint">Sélectionnez une option</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <p class="small text-muted text-center mt-2">
+                            💡 Simulateur interactif - Utilisez l'option 5 pour confirmer
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historique -->
+            <div class="card-ocean p-4 mt-4">
+                <h5><i class="bi bi-clock-history"></i> Historique des transactions</h5>
+                <div class="table-responsive mt-3">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Référence</th>
+                                <th>Méthode</th>
+                                <th>Motif</th>
+                                <th>Montant</th>
+                                <th>Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historique">
+                            <tr>
+                                <td>03/07/2026 10:30</td>
+                                <td><code>MOC-20260703-A1B2</code></td>
+                                <td>🟠 Orange Money</td>
+                                <td>Achat poisson</td>
+                                <td class="fw-bold">648 000 Ar</td>
+                                <td><span class="badge bg-success">✅ Réussi</span></td>
+                            </tr>
+                            <tr>
+                                <td>02/07/2026 15:00</td>
+                                <td><code>MOC-20260702-C3D4</code></td>
+                                <td>🟠 Orange Money</td>
+                                <td>Abonnement</td>
+                                <td class="fw-bold">10 000 Ar</td>
+                                <td><span class="badge bg-success">✅ Réussi</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+    .phone-simulator {
+        background: #1a1a1a;
+        border-radius: 25px;
+        padding: 12px;
+        max-width: 280px;
+        margin: 0 auto;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+    .phone-screen {
+        background: #f8f8f8;
+        border-radius: 15px;
+        padding: 15px 12px;
+        min-height: 380px;
+        font-family: 'Courier New', monospace;
+    }
+    .phone-header {
+        text-align: center;
+        font-size: 0.7rem;
+        margin-bottom: 8px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #ddd;
+    }
+    .phone-header .operator {
+        font-weight: bold;
+        color: #FF6600;
+        font-size: 0.85rem;
+    }
+    .ussd-screen {
+        background: white;
+        border-radius: 6px;
+        padding: 12px;
+        min-height: 300px;
+        font-size: 0.8rem;
+    }
+    .ussd-title {
+        background: #FF6600;
+        color: white;
+        text-align: center;
+        padding: 8px;
+        margin: -12px -12px 10px -12px;
+        border-radius: 6px 6px 0 0;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    .ussd-item {
+        padding: 10px 8px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: 0.2s;
+    }
+    .ussd-item:hover {
+        background: #FFF5F0;
+    }
+    .ussd-num {
+        background: #FF6600;
+        color: white;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: bold;
+        flex-shrink: 0;
+    }
+    .ussd-input {
+        background: #f9f9f9;
+        border: 2px solid #FF6600;
+        border-radius: 6px;
+        padding: 8px;
+        width: 100%;
+        text-align: center;
+        font-size: 1rem;
+        margin: 8px 0;
+    }
+    .ussd-btn {
+        background: #FF6600;
+        color: white;
+        border: none;
+        padding: 8px;
+        border-radius: 6px;
+        width: 100%;
+        font-weight: bold;
+        cursor: pointer;
+        margin-top: 6px;
+    }
+    .ussd-btn:hover { background: #e55a00; }
+    .ussd-cancel {
+        background: #999;
+    }
+    .ussd-cancel:hover { background: #777; }
+    .ussd-footer {
+        text-align: center;
+        font-size: 0.65rem;
+        color: #999;
+        margin-top: 8px;
+    }
+    .payment-method {
+        transition: all 0.3s;
+    }
+    .payment-method:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .payment-method.active {
+        border-color: #FF6B35 !important;
+        background: #FFF5F0;
+    }
+</style>
+
+<script>
+    let selectedMethod = 'orange';
+    let currentCode = '';
+    let currentMontant = 0;
+    let currentRef = '';
+
+    function selectMethod(method) {
+        selectedMethod = method;
+        document.querySelectorAll('.payment-method').forEach(el => el.classList.remove('active'));
+        document.getElementById('method-' + method).classList.add('active');
+        
+        const names = {orange: 'Orange Money', mvola: 'MVola', airtel: 'Airtel Money'};
+        const operators = {orange: 'Orange Money', mvola: 'MVola', airtel: 'Airtel Money'};
+        const colors = {orange: '#FF6600', mvola: '#E60000', airtel: '#0066CC'};
+        
+        document.getElementById('method-name').textContent = names[method];
+        document.getElementById('simulator-title').textContent = names[method];
+        document.getElementById('sim-operator').textContent = operators[method];
+        document.querySelector('.ussd-title').textContent = operators[method].toUpperCase();
+        document.querySelectorAll('.ussd-num').forEach(el => el.style.background = colors[method]);
+        document.querySelectorAll('.ussd-btn').forEach(el => { el.style.background = colors[method]; });
+        document.querySelector('.ussd-title').style.background = colors[method];
+    }
+
+    function setMontant(montant) {
+        document.getElementById('montant').value = montant;
+    }
+
+    function updatePhoneTime() {
+        const now = new Date();
+        document.getElementById('phone-time').textContent = 
+            now.getHours().toString().padStart(2,'0') + ':' + 
+            now.getMinutes().toString().padStart(2,'0');
+    }
+    setInterval(updatePhoneTime, 30000);
+    updatePhoneTime();
+
+    async function initierPaiement() {
+        const phone = document.getElementById('phone').value;
+        const montant = parseInt(document.getElementById('montant').value);
+        const motif = document.getElementById('motif').value;
+        
+        if (!phone || phone.length < 9) {
+            alert('Veuillez entrer un numéro valide');
+            return;
+        }
+        if (!montant || montant < 100) {
+            alert('Montant minimum : 100 Ar');
+            return;
+        }
+
+        const res = await fetch('/api/paiement/initier', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                telephone: '+261' + phone,
+                montant: montant,
+                motif: motif,
+                methode: selectedMethod
+            })
+        }).then(r => r.json());
+
+        if (res.success) {
+            currentCode = res.code_secret;
+            currentMontant = montant;
+            currentRef = res.reference;
+
+            document.getElementById('step1').style.display = 'none';
+            document.getElementById('step2').style.display = 'block';
+            
+            document.getElementById('confirm-method').textContent = 
+                selectedMethod === 'orange' ? '🟠 Orange Money' : 
+                selectedMethod === 'mvola' ? '🔴 MVola' : '🔵 Airtel Money';
+            document.getElementById('confirm-phone').textContent = phone;
+            document.getElementById('confirm-amount').textContent = montant.toLocaleString();
+            document.getElementById('confirm-motif').textContent = motif;
+            document.getElementById('confirm-code').textContent = currentCode;
+            
+            // Préparer le simulateur
+            document.getElementById('ussd-menu').style.display = 'none';
+            document.getElementById('ussd-code-screen').style.display = 'block';
+            document.getElementById('ussd-hint').textContent = 'Entrez le code secret';
+        } else {
+            alert('❌ ' + (res.message || 'Erreur'));
+        }
+    }
+
+    // Simulateur USSD
+    function ussdAction(action) {
+        if (action === 'confirm') {
+            document.getElementById('ussd-menu').style.display = 'none';
+            document.getElementById('ussd-code-screen').style.display = 'block';
+            document.getElementById('ussd-hint').textContent = 'Entrez le code secret';
+        } else {
+            alert('Option simulée. Utilisez "Confirmer un paiement" pour valider.');
+        }
+    }
+
+    function ussdConfirmCode() {
+        const code = document.getElementById('ussd-code-input').value;
+        
+        if (!currentCode) {
+            alert('⚠️ Initiez d\'abord un paiement depuis le formulaire.');
+            return;
+        }
+        
+        if (code === currentCode) {
+            document.getElementById('ussd-code-screen').style.display = 'none';
+            document.getElementById('ussd-success-screen').style.display = 'block';
+            document.getElementById('ussd-ref').textContent = 'Réf : ' + currentRef;
+            document.getElementById('ussd-amount').textContent = currentMontant.toLocaleString() + ' Ar';
+            document.getElementById('ussd-hint').textContent = 'Transaction réussie';
+            
+            // Afficher succès
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('step3').style.display = 'block';
+            document.getElementById('result-msg').textContent = '✅ Paiement de ' + currentMontant.toLocaleString() + ' Ar réussi !';
+            document.getElementById('result-ref').textContent = currentRef;
+            document.getElementById('result-amount').textContent = currentMontant.toLocaleString();
+            document.getElementById('result-date').textContent = new Date().toLocaleString('fr-FR');
+            
+            // Ajouter à l'historique
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${new Date().toLocaleString('fr-FR')}</td>
+                <td><code>${currentRef}</code></td>
+                <td>${selectedMethod === 'orange' ? '🟠 Orange Money' : selectedMethod === 'mvola' ? '🔴 MVola' : '🔵 Airtel Money'}</td>
+                <td>${document.getElementById('motif').value}</td>
+                <td class="fw-bold">${currentMontant.toLocaleString()} Ar</td>
+                <td><span class="badge bg-success">✅ Réussi</span></td>
+            `;
+            document.getElementById('historique').prepend(row);
+        } else {
+            alert('❌ Code incorrect ! Le code est : ' + currentCode);
+        }
+    }
+
+    function ussdBack() {
+        document.getElementById('ussd-code-screen').style.display = 'none';
+        document.getElementById('ussd-menu').style.display = 'block';
+        document.getElementById('ussd-hint').textContent = 'Sélectionnez une option';
+    }
+
+    function ussdReset() {
+        document.getElementById('ussd-success-screen').style.display = 'none';
+        document.getElementById('ussd-menu').style.display = 'block';
+        document.getElementById('ussd-hint').textContent = 'Sélectionnez une option';
+    }
+
+    function resetPaiement() {
+        document.getElementById('step1').style.display = 'block';
+        document.getElementById('step2').style.display = 'none';
+        document.getElementById('step3').style.display = 'none';
+        ussdReset();
+    }
+</script>
+{% endblock %}

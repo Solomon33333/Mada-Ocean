@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Modal Nouvelle Prise -->
+<div class="modal fade" id="priseModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:20px;">
+            <div class="modal-header" style="background:#0B3D5C;color:white;border-radius:20px 20px 0 0;">
+                <h5 class="modal-title">📸 Nouvelle Prise</h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="priseForm">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">🐟 Espèce</label>
+                        <select class="form-select" id="espece" required>
+                            <option value="">Choisir...</option>
+                            <option value="Thon Jaune">🐟 Thon Jaune</option>
+                            <option value="Espadon">🐠 Espadon</option>
+                            <option value="Maquereau">🎣 Maquereau</option>
+                            <option value="Langouste">🦞 Langouste</option>
+                            <option value="Crabe">🦀 Crabe</option>
+                            <option value="Poulpe">🐙 Poulpe</option>
+                            <option value="Calmar">🦑 Calmar</option>
+                        </select>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold">⚖️ Poids (kg)</label>
+                            <input type="number" class="form-control" id="poids" placeholder="Ex: 25" step="0.1" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold">💰 Prix/kg (Ar)</label>
+                            <input type="number" class="form-control" id="prix" placeholder="Ex: 18000" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">📍 Zone de pêche</label>
+                        <input type="text" class="form-control" id="zone" placeholder="Ex: 5 km au large de Mangarivotra">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">📝 Description</label>
+                        <textarea class="form-control" id="description" rows="2" placeholder="Décrivez votre prise..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">🚢 Port de débarquement</label>
+                        <select class="form-select" id="portSelect">
+                            <option value="Mahavatse">Mahavatse</option>
+                            <option value="Mahajanga-by">Mahajanga-by</option>
+                            <option value="Saint-Augustin">Saint-Augustin</option>
+                            <option value="Anakao">Anakao</option>
+                            <option value="Salary">Salary</option>
+                            <option value="Ifaty">Ifaty</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button class="btn btn-coral" onclick="publierPrise()">📢 Publier la prise</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-4">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white" id="welcome">👋 Bonjour !</h2>
+        <span id="role-badge" class="badge bg-info fs-6"></span>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="row g-3 mb-4" id="stats"></div>
+
+    <!-- Actions rapides -->
+    <div class="row g-3 mb-4" id="actions"></div>
+
+    <!-- Activité récente -->
+    <div class="card-ocean p-4">
+        <h5 class="mb-3">📋 Activité récente</h5>
+        <div id="activity">Chargement...</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    //let currentUser = null;
+
+    async function load() {
+        const me = await fetch('/api/me').then(r => r.json());
+        if (!me.success) { window.location.href = '/connexion'; return; }
+
+        currentUser = me.user;
+        document.getElementById('welcome').textContent = 
+            `👋 Bonjour ${currentUser.prenom || currentUser.nom} !`;
+
+        // Badge rôle
+        const roleBadge = document.getElementById('role-badge');
+        if (roleBadge) {
+            if (currentUser.role === 'pecheur') {
+                if (currentUser.abonnement_actif) {
+                    roleBadge.textContent = '🎣 Pêcheur ✅ Abonnement actif';
+                    roleBadge.className = 'badge bg-success fs-6';
+                } else {
+                    roleBadge.textContent = '🎣 Pêcheur ⚠️ Pas d\'abonnement';
+                    roleBadge.className = 'badge bg-danger fs-6';
+                }
+            } else if (currentUser.role === 'admin') {
+                roleBadge.textContent = '👑 Administrateur';
+                roleBadge.className = 'badge bg-warning text-dark fs-6';
+            } else {
+                roleBadge.textContent = '🏨 Acheteur';
+                roleBadge.className = 'badge bg-primary fs-6';
+            }
+        }
+
+        // Stats
+        const stats = await fetch('/api/stats').then(r => r.json());
+        if (stats.success) {
+            const s = stats.stats;
+            document.getElementById('stats').innerHTML = `
+                <div class="col-md-3 col-6">
+                    <div class="card-ocean p-3 text-center">
+                        <div class="stat-number" style="color:#FF6B35">${s.prises_actives}</div>
+                        <small class="text-muted">Prises actives</small>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card-ocean p-3 text-center">
+                        <div class="stat-number" style="color:#0B3D5C">${s.pecheurs}</div>
+                        <small class="text-muted">Pêcheurs</small>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card-ocean p-3 text-center">
+                        <div class="stat-number" style="color:#00A896">${s.acheteurs}</div>
+                        <small class="text-muted">Acheteurs</small>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card-ocean p-3 text-center">
+                        <div class="stat-number" style="color:#FFD166">${(s.volume_transactions / 1000000).toFixed(1)}M</div>
+                        <small class="text-muted">Volume (Ar)</small>
+                    </div>
+                </div>`;
+        }
+
+        // Actions selon le rôle
+        const actionsDiv = document.getElementById('actions');
+        actionsDiv.innerHTML = '';
+
+        if (currentUser.role === 'pecheur') {
+            if (currentUser.abonnement_actif) {
+                actionsDiv.innerHTML += `
+                    <div class="col-md-4">
+                        <div class="card-ocean p-4 text-center h-100">
+                            <div style="font-size:3rem;">📸</div>
+                            <h5>Nouvelle Prise</h5>
+                            <p class="text-muted">Publiez votre pêche du jour</p>
+                            <button class="btn btn-coral" data-bs-toggle="modal" data-bs-target="#priseModal">
+                                + Publier
+                            </button>
+                        </div>
+                    </div>`;
+            } else {
+                actionsDiv.innerHTML += `
+                    <div class="col-md-4">
+                        <div class="card-ocean p-4 text-center h-100" style="border:2px solid #FF6B35;">
+                            <div style="font-size:3rem;">🔒</div>
+                            <h5>Abonnement Requis</h5>
+                            <p class="text-muted">Souscrivez pour publier</p>
+                            <a href="/abonnement" class="btn btn-coral">💳 10 000 Ar/mois</a>
+                        </div>
+                    </div>`;
+            }
+        } else if (currentUser.role === 'acheteur') {
+            actionsDiv.innerHTML += `
+                <div class="col-md-4">
+                    <div class="card-ocean p-4 text-center h-100">
+                        <div style="font-size:3rem;">🛒</div>
+                        <h5>Marché</h5>
+                        <p class="text-muted">Voir les prises disponibles</p>
+                        <a href="/marche" class="btn btn-green">Voir le marché</a>
+                    </div>
+                </div>`;
+        } else if (currentUser.role === 'admin') {
+            actionsDiv.innerHTML += `
+                <div class="col-md-4">
+                    <div class="card-ocean p-4 text-center h-100">
+                        <div style="font-size:3rem;">👑</div>
+                        <h5>Administration</h5>
+                        <p class="text-muted">Gérer la plateforme</p>
+                        <a href="/admin" class="btn btn-ocean text-white">Dashboard Admin</a>
+                    </div>
+                </div>`;
+        }
+
+        // Actions communes
+        actionsDiv.innerHTML += `
+            <div class="col-md-4">
+                <div class="card-ocean p-4 text-center h-100">
+                    <div style="font-size:3rem;">🧠</div>
+                    <h5>Prédictions IA</h5>
+                    <p class="text-muted">Espèces probables demain</p>
+                    <a href="/predictions" class="btn btn-ocean text-white">Voir</a>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card-ocean p-4 text-center h-100">
+                    <div style="font-size:3rem;">💬</div>
+                    <h5>Messages</h5>
+                    <p class="text-muted">Chat avec utilisateurs</p>
+                    <a href="/chat" class="btn btn-outline-ocean">Chat</a>
+                </div>
+            </div>`;
+
+        // Activité récente
+        const res = await fetch('/api/reservations').then(r => r.json());
+        if (res.success && res.reservations.length > 0) {
+            document.getElementById('activity').innerHTML = res.reservations.slice(0, 5).map(r => `
+                <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+                    <span>${r.icon || '🐟'} ${r.espece || 'Produit'} - ${r.poids_kg || '?'}kg</span>
+                    <span class="badge bg-${r.statut === 'confirmee' ? 'success' : r.statut === 'en_attente' ? 'warning' : 'secondary'}">
+                        ${r.statut || '?'}
+                    </span>
+                </div>
+            `).join('');
+        } else {
+            document.getElementById('activity').innerHTML = 
+                '<p class="text-muted text-center py-3">Aucune activité récente</p>';
+        }
+    }
+
+    async function publierPrise() {
+        const especeSelect = document.getElementById('espece');
+        const data = {
+            espece: especeSelect.value,
+            icon: especeSelect.selectedOptions[0]?.text.split(' ')[0] || '🐟',
+            poids_kg: parseFloat(document.getElementById('poids').value),
+            prix_kg: parseFloat(document.getElementById('prix').value),
+            zone: document.getElementById('zone').value,
+            description: document.getElementById('description').value,
+            port: document.getElementById('portSelect').value
+        };
+
+        if (!data.espece || !data.poids_kg || !data.prix_kg) {
+            alert('Veuillez remplir tous les champs obligatoires');
+            return;
+        }
+
+        const res = await fetch('/api/prises', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        }).then(r => r.json());
+
+        if (res.success) {
+            alert('✅ ' + res.message);
+            const modal = bootstrap.Modal.getInstance(document.getElementById('priseModal'));
+            if (modal) modal.hide();
+            location.reload();
+        } else {
+            if (res.code === 'ABONNEMENT_REQUIS') {
+                alert(res.message);
+                window.location.href = '/abonnement';
+            } else {
+                alert('❌ ' + res.message);
+            }
+        }
+    }
+
+    load();
+</script>
+{% endblock %}

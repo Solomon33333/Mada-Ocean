@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white">🛒 Marché aux Poissons</h2>
+        <div>
+            <a href="/panier" class="btn btn-coral position-relative">
+                <i class="bi bi-cart"></i> Panier
+                <span id="panier-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none;">0</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card-ocean p-3 mb-4">
+        <div class="row g-2">
+            <div class="col-md-3">
+                <select class="form-select" id="filter-categorie" onchange="loadMarket()">
+                    <option value="">Toutes catégories</option>
+                    <option value="poisson">🐟 Poissons</option>
+                    <option value="crustace">🦞 Crustacés</option>
+                    <option value="mollusque">🐙 Mollusques</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="filter-tri" onchange="loadMarket()">
+                    <option value="recent">Plus récents</option>
+                    <option value="prix_croissant">Prix croissant</option>
+                    <option value="prix_decroissant">Prix décroissant</option>
+                    <option value="note">Mieux notés</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="text" class="form-control" id="filter-search" 
+                       placeholder="Rechercher..." onkeyup="loadMarket()">
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="filter-port" onchange="loadMarket()">
+                    <option value="">Tous les ports</option>
+                    <option value="Mahavatse">Mahavatse</option>
+                    <option value="Anakao">Anakao</option>
+                    <option value="Salary">Salary</option>
+                    <option value="Saint-Augustin">Saint-Augustin</option>
+                    <option value="Ifaty">Ifaty</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grille des produits -->
+    <div class="row g-3" id="market">
+        <div class="col-12 text-center text-white py-5">
+            <div class="loading-spinner mx-auto"></div>
+            <p class="mt-3">Chargement des produits...</p>
+        </div>
+    </div>
+
+    <!-- Modal Ajouter au panier -->
+    <div class="modal fade" id="panierModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius:20px;">
+                <div class="modal-header" style="background:#0B3D5C;color:white;border-radius:20px 20px 0 0;">
+                    <h5 class="modal-title">🛒 Ajouter au panier</h5>
+                    <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="panier-modal-body">
+                    <!-- Rempli dynamiquement -->
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button class="btn btn-coral" onclick="ajouterAuPanier()">
+                        <i class="bi bi-cart-plus"></i> Ajouter au panier
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let priseSelectionnee = null;
+    //let currentUser = null;
+
+    // Charger l'utilisateur et le marché
+    async function init() {
+        const me = await fetch('/api/me').then(r => r.json());
+        if (me.success) currentUser = me.user;
+        
+        loadMarket();
+        updatePanierCount();
+    }
+
+    // Mettre à jour le compteur du panier
+    async function updatePanierCount() {
+        try {
+            const res = await fetch('/api/panier').then(r => r.json());
+            if (res.success && res.nb_articles > 0) {
+                document.getElementById('panier-count').textContent = res.nb_articles;
+                document.getElementById('panier-count').style.display = 'inline';
+            } else {
+                document.getElementById('panier-count').style.display = 'none';
+            }
+        } catch (e) {}
+    }
+
+    async function loadMarket() {
+        const categorie = document.getElementById('filter-categorie')?.value || '';
+        const tri = document.getElementById('filter-tri')?.value || 'recent';
+        const search = document.getElementById('filter-search')?.value || '';
+        const port = document.getElementById('filter-port')?.value || '';
+        
+        let url = '/api/prises?statut=active';
+        if (categorie) url += '&categorie=' + categorie;
+        if (tri) url += '&tri=' + tri;
+        if (search) url += '&search=' + encodeURIComponent(search);
+        if (port) url += '&port=' + encodeURIComponent(port);
+        
+        const res = await fetch(url).then(r => r.json());
+        
+        if (res.success && res.prises.length > 0) {
+            document.getElementById('market').innerHTML = res.prises.map(p => `
+                <div class="col-md-4 col-lg-3 col-6">
+                    <div class="card-ocean p-3 h-100 position-relative">
+                        ${p.qualite === 'A+' ? '<span class="badge bg-success position-absolute top-0 end-0 m-2">Premium</span>' : ''}
+                        <div class="text-center mb-2">
+                            <div style="font-size:3rem;">${p.icon}</div>
+                        </div>
+                        <h6 class="fw-bold">${p.espece}</h6>
+                        <p class="text-muted small mb-1">${p.description ? p.description.substring(0, 50) + '...' : p.zone}</p>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span><strong>${p.stock_kg} kg</strong> dispo</span>
+                            <span class="badge bg-info">⭐ ${p.pecheur_note || '5.0'}</span>
+                        </div>
+                        
+                        <div class="price mb-2">${p.prix_kg?.toLocaleString()} Ar/kg</div>
+                        <p class="fw-bold text-dark">Total: ${p.prix_total?.toLocaleString()} Ar</p>
+                        
+                        <div class="small text-muted mb-2">
+                            👤 ${p.pecheur_nom}<br>
+                            📍 ${p.port} | 👁️ ${p.nb_vues} vues
+                        </div>
+                        
+                        ${currentUser && currentUser.role === 'acheteur' ? `
+                            <button class="btn btn-coral w-100" onclick="ouvrirPanier(${p.id})">
+                                <i class="bi bi-cart-plus"></i> Ajouter au panier
+                            </button>
+                        ` : currentUser ? `
+                            <span class="badge bg-secondary w-100 p-2">Réservé aux acheteurs</span>
+                        ` : `
+                            <a href="/connexion?redirect=/marche" class="btn btn-outline-coral w-100 btn-sm">
+                                🔐 Connectez-vous pour acheter
+                            </a>
+                        `}
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            document.getElementById('market').innerHTML = `
+                <div class="col-12">
+                    <div class="card-ocean p-5 text-center">
+                        <div style="font-size:4rem;">🐟</div>
+                        <h5>Aucun produit disponible</h5>
+                        <p class="text-muted">Revenez plus tard ou modifiez vos filtres.</p>
+                    </div>
+                </div>`;
+        }
+    }
+
+    // Ouvrir le modal pour choisir la quantité
+    async function ouvrirPanier(priseId) {
+        const res = await fetch('/api/prises?statut=active').then(r => r.json());
+        const prise = res.prises.find(p => p.id === priseId);
+        
+        if (!prise) {
+            alert('Produit introuvable');
+            return;
+        }
+        
+        priseSelectionnee = prise;
+        
+        document.getElementById('panier-modal-body').innerHTML = `
+            <div class="text-center mb-3">
+                <div style="font-size:4rem;">${prise.icon}</div>
+                <h5>${prise.espece}</h5>
+                <p class="text-muted">${prise.description || prise.zone}</p>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-6">
+                    <label class="form-label fw-bold">⚖️ Quantité (kg)</label>
+                    <input type="number" class="form-control" id="quantite" 
+                           value="1" min="0.5" max="${prise.stock_kg}" step="0.5">
+                    <small class="text-muted">Max : ${prise.stock_kg} kg</small>
+                </div>
+                <div class="col-6">
+                    <label class="form-label fw-bold">💰 Prix/kg</label>
+                    <input type="text" class="form-control" value="${prise.prix_kg?.toLocaleString()} Ar" disabled>
+                </div>
+            </div>
+            
+            <div class="alert alert-info">
+                <h6>📋 Résumé :</h6>
+                <p class="mb-1">👤 Pêcheur : <strong>${prise.pecheur_nom}</strong> ⭐${prise.pecheur_note}</p>
+                <p class="mb-1">📍 Port : <strong>${prise.port}</strong></p>
+                <p class="mb-0">💰 Total estimé : <strong id="total-estime">${prise.prix_kg?.toLocaleString()} Ar</strong></p>
+            </div>
+        `;
+        
+        // Mettre à jour le total en temps réel
+        document.getElementById('quantite').addEventListener('input', function() {
+            const qte = parseFloat(this.value) || 0;
+            const total = qte * prise.prix_kg;
+            document.getElementById('total-estime').textContent = total.toLocaleString() + ' Ar';
+        });
+        
+        new bootstrap.Modal(document.getElementById('panierModal')).show();
+    }
+
+    // Ajouter au panier
+    async function ajouterAuPanier() {
+        if (!priseSelectionnee) return;
+        
+        const quantite = parseFloat(document.getElementById('quantite').value);
+        
+        if (!quantite || quantite <= 0) {
+            alert('Veuillez entrer une quantité valide');
+            return;
+        }
+        
+        if (quantite > priseSelectionnee.stock_kg) {
+            alert(`Stock insuffisant. Maximum : ${priseSelectionnee.stock_kg} kg`);
+            return;
+        }
+        
+        const res = await fetch('/api/panier/ajouter', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                prise_id: priseSelectionnee.id,
+                quantite_kg: quantite
+            })
+        }).then(r => r.json());
+        
+        if (res.success) {
+            alert('✅ ' + res.message);
+            bootstrap.Modal.getInstance(document.getElementById('panierModal')).hide();
+            updatePanierCount();
+            loadMarket();
+        } else {
+            alert('❌ ' + res.message);
+        }
+    }
+
+    init();
+</script>
+{% endblock %}

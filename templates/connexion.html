@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="toast-msg" id="toast"></div>
+
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="col-md-5 col-lg-4">
+        <div class="card-ocean p-4">
+            <div class="text-center mb-4">
+                <div style="font-size: 3rem;">🌊</div>
+                <h2>Connexion</h2>
+                <p class="text-muted">Accédez à votre compte Mada Océan</p>
+            </div>
+            
+            <form id="loginForm">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        <i class="bi bi-phone"></i> Téléphone
+                    </label>
+                    <input type="text" class="form-control form-control-lg" id="telephone" 
+                           placeholder="034 XX XXX XX" required
+                           pattern="[0-9]{10}" title="10 chiffres requis">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="form-label fw-bold">
+                        <i class="bi bi-lock"></i> Mot de passe
+                    </label>
+                    <input type="password" class="form-control form-control-lg" id="password" 
+                           placeholder="••••••" required>
+                    <small class="text-muted">Minimum 4 caractères</small>
+                </div>
+                
+                <button type="submit" class="btn btn-coral w-100 btn-lg" id="submitBtn">
+                    <i class="bi bi-box-arrow-in-right"></i> Se connecter
+                </button>
+            </form>
+            
+            <div class="text-center mt-3">
+                <p>Pas de compte ? <a href="/inscription" class="fw-bold" style="color:#FF6B35;">S'inscrire gratuitement</a></p>
+                <p><a href="/" class="text-muted small">← Retour à l'accueil</a></p>
+            </div>
+            
+            <hr>
+            
+            <!-- Comptes test -->
+            <div class="small">
+                <strong class="text-muted">🔑 Comptes de démonstration :</strong>
+                <div class="mt-2">
+                    <span class="badge" style="background:#FFF3E0;color:#FF6B35;">🎣 Pêcheur</span>
+                    <code class="small">0341234567</code>
+                    <span class="text-muted">/</span>
+                    <code class="small">123456</code>
+                </div>
+                <div class="mt-1">
+                    <span class="badge" style="background:#E0F5F0;color:#00A896;">🏨 Acheteur</span>
+                    <code class="small">0341231234</code>
+                    <span class="text-muted">/</span>
+                    <code class="small">123456</code>
+                </div>
+                <div class="mt-1">
+                    <span class="badge" style="background:#E3F2FD;color:#0B3D5C;">👑 Admin</span>
+                    <code class="small">0349999999</code>
+                    <span class="text-muted">/</span>
+                    <code class="small">admin123</code>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Message info -->
+        <div class="text-center mt-3 text-white small opacity-75">
+            <i class="bi bi-shield-check"></i> Connexion sécurisée • 
+            <i class="bi bi-phone"></i> Orange Money accepté
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Toast notification
+    function showToast(msg, type='success') {
+        const bg = type === 'success' ? 'bg-success' : 'bg-danger';
+        const icon = type === 'success' ? '✅' : '❌';
+        document.getElementById('toast').innerHTML = `
+            <div class="toast align-items-center text-white ${bg} border-0 show" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body fw-bold">${icon} ${msg}</div>
+                    <button class="btn-close btn-close-white me-2 m-auto" onclick="this.parentElement.parentElement.remove()"></button>
+                </div>
+            </div>`;
+        setTimeout(() => document.getElementById('toast').innerHTML = '', 5000);
+    }
+
+    // Gestion du formulaire
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const tel = document.getElementById('telephone').value.trim();
+        const pwd = document.getElementById('password').value;
+        const btn = document.getElementById('submitBtn');
+        
+        // Validation basique
+        if (tel.length < 10) {
+            showToast('Numéro de téléphone invalide', 'error');
+            return;
+        }
+        
+        // État loading
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Connexion...';
+        
+        try {
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    telephone: tel, 
+                    mot_de_passe: pwd
+                })
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                showToast(data.message, 'success');
+                
+                // Récupérer l'URL de redirection
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirectUrl = urlParams.get('redirect') || data.redirect || '/dashboard';
+                
+                // Redirection après un court délai
+                setTimeout(() => {
+                    window.location.href = redirectUrl;
+                }, 800);
+                
+            } else {
+                showToast(data.message || 'Identifiants incorrects', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Se connecter';
+                
+                // Animation secousse
+                document.querySelector('.card-ocean').style.animation = 'shake 0.5s';
+                setTimeout(() => {
+                    document.querySelector('.card-ocean').style.animation = '';
+                }, 500);
+            }
+        } catch (err) {
+            showToast('Erreur de connexion au serveur', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Se connecter';
+            console.error('Erreur:', err);
+        }
+    });
+</script>
+
+<style>
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-10px); }
+        75% { transform: translateX(10px); }
+    }
+</style>
+{% endblock %}
