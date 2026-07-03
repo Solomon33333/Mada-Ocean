@@ -26,8 +26,14 @@
                     <label class="form-label fw-bold">
                         <i class="bi bi-lock"></i> Mot de passe
                     </label>
-                    <input type="password" class="form-control form-control-lg" id="password" 
-                           placeholder="••••••" required>
+                    <div class="input-group">
+                        <input type="password" class="form-control form-control-lg" id="password" 
+                               placeholder="••••••" required>
+                        <button class="btn btn-outline-secondary btn-lg" type="button" 
+                                onclick="togglePassword()" id="togglePwdBtn">
+                            <i class="bi bi-eye" id="togglePwdIcon"></i>
+                        </button>
+                    </div>
                     <small class="text-muted">Minimum 4 caractères</small>
                 </div>
                 
@@ -39,31 +45,6 @@
             <div class="text-center mt-3">
                 <p>Pas de compte ? <a href="/inscription" class="fw-bold" style="color:#FF6B35;">S'inscrire gratuitement</a></p>
                 <p><a href="/" class="text-muted small">← Retour à l'accueil</a></p>
-            </div>
-            
-            <hr>
-            
-            <!-- Comptes test -->
-            <div class="small">
-                <strong class="text-muted">🔑 Comptes de démonstration :</strong>
-                <div class="mt-2">
-                    <span class="badge" style="background:#FFF3E0;color:#FF6B35;">🎣 Pêcheur</span>
-                    <code class="small">0341234567</code>
-                    <span class="text-muted">/</span>
-                    <code class="small">123456</code>
-                </div>
-                <div class="mt-1">
-                    <span class="badge" style="background:#E0F5F0;color:#00A896;">🏨 Acheteur</span>
-                    <code class="small">0341231234</code>
-                    <span class="text-muted">/</span>
-                    <code class="small">123456</code>
-                </div>
-                <div class="mt-1">
-                    <span class="badge" style="background:#E3F2FD;color:#0B3D5C;">👑 Admin</span>
-                    <code class="small">0349999999</code>
-                    <span class="text-muted">/</span>
-                    <code class="small">admin123</code>
-                </div>
             </div>
         </div>
         
@@ -90,6 +71,20 @@
                 </div>
             </div>`;
         setTimeout(() => document.getElementById('toast').innerHTML = '', 5000);
+    }
+
+    // Toggle password visibility
+    function togglePassword() {
+        const passwordInput = document.getElementById('password');
+        const toggleIcon = document.getElementById('togglePwdIcon');
+        
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            toggleIcon.className = 'bi bi-eye-slash';
+        } else {
+            passwordInput.type = 'password';
+            toggleIcon.className = 'bi bi-eye';
+        }
     }
 
     // Gestion du formulaire
