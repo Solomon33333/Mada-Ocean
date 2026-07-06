@@ -3,7 +3,7 @@
 {% block content %}
 <!-- Modal Nouvelle Prise -->
 <div class="modal fade" id="priseModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content" style="border-radius:20px;">
             <div class="modal-header" style="background:#0B3D5C;color:white;border-radius:20px 20px 0 0;">
                 <h5 class="modal-title">📸 Nouvelle Prise</h5>
@@ -11,53 +11,98 @@
             </div>
             <div class="modal-body">
                 <form id="priseForm">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">🐟 Espèce</label>
-                        <select class="form-select" id="espece" required>
-                            <option value="">Choisir...</option>
-                            <option value="Thon Jaune">🐟 Thon Jaune</option>
-                            <option value="Espadon">🐠 Espadon</option>
-                            <option value="Maquereau">🎣 Maquereau</option>
-                            <option value="Langouste">🦞 Langouste</option>
-                            <option value="Crabe">🦀 Crabe</option>
-                            <option value="Poulpe">🐙 Poulpe</option>
-                            <option value="Calmar">🦑 Calmar</option>
-                        </select>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-6">
-                            <label class="form-label fw-bold">⚖️ Poids (kg)</label>
-                            <input type="number" class="form-control" id="poids" placeholder="Ex: 25" step="0.1" required>
+                    <div class="row g-3">
+                        <!-- Colonne gauche : Formulaire -->
+                        <div class="col-md-7">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">🐟 Espèce <span class="text-danger">*</span></label>
+                                <select class="form-select" id="espece" required onchange="updatePrixSuggere()">
+                                    <option value="">Choisir...</option>
+                                    <option value="Thon Jaune">🐟 Thon Jaune</option>
+                                    <option value="Espadon">🐠 Espadon</option>
+                                    <option value="Maquereau">🎣 Maquereau</option>
+                                    <option value="Langouste">🦞 Langouste</option>
+                                    <option value="Crabes">🦀 Crabes</option>
+                                    <option value="Poulpe">🐙 Poulpe</option>
+                                    <option value="Calmar">🦑 Calmar</option>
+                                </select>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label class="form-label fw-bold">⚖️ Poids (kg) <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="poids" placeholder="Ex: 25" step="0.1" required oninput="updateResume()">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label fw-bold">💰 Prix/kg (Ar) <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="prix" placeholder="Ex: 18000" required oninput="updateResume()">
+                                    <small class="text-muted" id="prix-suggere"></small>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">📍 Zone de pêche</label>
+                                <input type="text" class="form-control" id="zone" placeholder="Ex: 5 km au large de Mangarivotra">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">🚢 Port de débarquement</label>
+                                <select class="form-select" id="portSelect">
+                                    <option value="Mahavatse">Mahavatse</option>
+                                    <option value="Mahajanga-by">Mahajanga-by</option>
+                                    <option value="Saint-Augustin">Saint-Augustin</option>
+                                    <option value="Anakao">Anakao</option>
+                                    <option value="Salary">Salary</option>
+                                    <option value="Ifaty">Ifaty</option>
+                                    <option value="Mangarivotra">Mangarivotra</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">⭐ Qualité</label>
+                                <select class="form-select" id="qualite">
+                                    <option value="A+">A+ - Exceptionnelle</option>
+                                    <option value="A" selected>A - Très bonne</option>
+                                    <option value="B+">B+ - Bonne</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">📝 Description</label>
+                                <textarea class="form-control" id="description" rows="2" placeholder="Décrivez votre prise..."></textarea>
+                            </div>
                         </div>
-                        <div class="col-6">
-                            <label class="form-label fw-bold">💰 Prix/kg (Ar)</label>
-                            <input type="number" class="form-control" id="prix" placeholder="Ex: 18000" required>
+                        
+                        <!-- Colonne droite : Photo -->
+                        <div class="col-md-5 text-center">
+                            <label class="form-label fw-bold">📸 Photo de la prise</label>
+                            <div class="mb-2" id="preview-container" style="width:100%;height:200px;border:2px dashed #ddd;border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+                                <span class="text-muted" id="preview-placeholder">
+                                    <i class="bi bi-camera" style="font-size:3rem;"></i><br>Aperçu
+                                </span>
+                                <img id="preview-image" src="" alt="Prévisualisation" style="display:none;width:100%;height:100%;object-fit:cover;">
+                            </div>
+                            <input type="file" class="form-control" id="photo-upload" accept="image/*" onchange="previewImage(event)">
+                            <small class="text-muted">JPG, PNG, GIF, WEBP - Max 16 MB</small>
+                            <input type="hidden" id="image-url" value="">
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">📍 Zone de pêche</label>
-                        <input type="text" class="form-control" id="zone" placeholder="Ex: 5 km au large de Mangarivotra">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">📝 Description</label>
-                        <textarea class="form-control" id="description" rows="2" placeholder="Décrivez votre prise..."></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">🚢 Port de débarquement</label>
-                        <select class="form-select" id="portSelect">
-                            <option value="Mahavatse">Mahavatse</option>
-                            <option value="Mahajanga-by">Mahajanga-by</option>
-                            <option value="Saint-Augustin">Saint-Augustin</option>
-                            <option value="Anakao">Anakao</option>
-                            <option value="Salary">Salary</option>
-                            <option value="Ifaty">Ifaty</option>
-                        </select>
+                    
+                    <!-- Résumé -->
+                    <div class="alert alert-info mt-3" id="resume-prise" style="display:none;">
+                        <h6>📋 Résumé</h6>
+                        <p class="mb-1">🐟 <strong id="resume-espece">-</strong></p>
+                        <p class="mb-1">⚖️ <strong id="resume-poids">-</strong> kg</p>
+                        <p class="mb-1">💰 <strong id="resume-prix">-</strong> Ar/kg</p>
+                        <p class="mb-0 fw-bold">💵 Total : <strong id="resume-total" style="color:#FF6B35;">-</strong> Ar</p>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                <button class="btn btn-coral" onclick="publierPrise()">📢 Publier la prise</button>
+                <button class="btn btn-coral" onclick="publierPrise()">
+                    <i class="bi bi-cloud-upload"></i> 📢 Publier la prise
+                </button>
             </div>
         </div>
     </div>
@@ -67,7 +112,7 @@
     <!-- En-tête -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="text-white" id="welcome">👋 Bonjour !</h2>
-        <span id="role-badge" class="badge bg-info fs-6"></span>
+        <span id="role-badge" class="badge fs-6"></span>
     </div>
 
     <!-- Statistiques -->
@@ -86,7 +131,7 @@
 
 {% block scripts %}
 <script>
-    //let currentUser = null;
+    // currentUser est déjà dans base.html
 
     async function load() {
         const me = await fetch('/api/me').then(r => r.json());
@@ -98,53 +143,31 @@
 
         // Badge rôle
         const roleBadge = document.getElementById('role-badge');
-        if (roleBadge) {
-            if (currentUser.role === 'pecheur') {
-                if (currentUser.abonnement_actif) {
-                    roleBadge.textContent = '🎣 Pêcheur ✅ Abonnement actif';
-                    roleBadge.className = 'badge bg-success fs-6';
-                } else {
-                    roleBadge.textContent = '🎣 Pêcheur ⚠️ Pas d\'abonnement';
-                    roleBadge.className = 'badge bg-danger fs-6';
-                }
-            } else if (currentUser.role === 'admin') {
-                roleBadge.textContent = '👑 Administrateur';
-                roleBadge.className = 'badge bg-warning text-dark fs-6';
+        if (currentUser.role === 'pecheur') {
+            if (currentUser.abonnement_actif) {
+                roleBadge.textContent = '🎣 Pêcheur ✅ Abonnement actif';
+                roleBadge.className = 'badge bg-success fs-6';
             } else {
-                roleBadge.textContent = '🏨 Acheteur';
-                roleBadge.className = 'badge bg-primary fs-6';
+                roleBadge.textContent = '🎣 Pêcheur ⚠️ Pas d\'abonnement';
+                roleBadge.className = 'badge bg-danger fs-6';
             }
+        } else if (currentUser.role === 'admin') {
+            roleBadge.textContent = '👑 Administrateur';
+            roleBadge.className = 'badge bg-warning text-dark fs-6';
+        } else {
+            roleBadge.textContent = '🏨 Acheteur';
+            roleBadge.className = 'badge bg-primary fs-6';
         }
 
-        // Stats
+        // Stats depuis l'API
         const stats = await fetch('/api/stats').then(r => r.json());
         if (stats.success) {
             const s = stats.stats;
             document.getElementById('stats').innerHTML = `
-                <div class="col-md-3 col-6">
-                    <div class="card-ocean p-3 text-center">
-                        <div class="stat-number" style="color:#FF6B35">${s.prises_actives}</div>
-                        <small class="text-muted">Prises actives</small>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6">
-                    <div class="card-ocean p-3 text-center">
-                        <div class="stat-number" style="color:#0B3D5C">${s.pecheurs}</div>
-                        <small class="text-muted">Pêcheurs</small>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6">
-                    <div class="card-ocean p-3 text-center">
-                        <div class="stat-number" style="color:#00A896">${s.acheteurs}</div>
-                        <small class="text-muted">Acheteurs</small>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6">
-                    <div class="card-ocean p-3 text-center">
-                        <div class="stat-number" style="color:#FFD166">${(s.volume_transactions / 1000000).toFixed(1)}M</div>
-                        <small class="text-muted">Volume (Ar)</small>
-                    </div>
-                </div>`;
+                <div class="col-md-3 col-6"><div class="card-ocean p-3 text-center"><div class="stat-number" style="color:#FF6B35">${s.prises_actives}</div><small class="text-muted">🐟 Prises actives</small></div></div>
+                <div class="col-md-3 col-6"><div class="card-ocean p-3 text-center"><div class="stat-number" style="color:#0B3D5C">${s.pecheurs}</div><small class="text-muted">🎣 Pêcheurs</small></div></div>
+                <div class="col-md-3 col-6"><div class="card-ocean p-3 text-center"><div class="stat-number" style="color:#00A896">${s.acheteurs}</div><small class="text-muted">🏨 Acheteurs</small></div></div>
+                <div class="col-md-3 col-6"><div class="card-ocean p-3 text-center"><div class="stat-number" style="color:#FFD166">${((s.volume_transactions || 0) / 1000000).toFixed(1)}M</div><small class="text-muted">💰 Volume (Ar)</small></div></div>`;
         }
 
         // Actions selon le rôle
@@ -154,119 +177,147 @@
         if (currentUser.role === 'pecheur') {
             if (currentUser.abonnement_actif) {
                 actionsDiv.innerHTML += `
-                    <div class="col-md-4">
-                        <div class="card-ocean p-4 text-center h-100">
-                            <div style="font-size:3rem;">📸</div>
-                            <h5>Nouvelle Prise</h5>
-                            <p class="text-muted">Publiez votre pêche du jour</p>
-                            <button class="btn btn-coral" data-bs-toggle="modal" data-bs-target="#priseModal">
-                                + Publier
-                            </button>
-                        </div>
-                    </div>`;
+                    <div class="col-md-4"><div class="card-ocean p-4 text-center h-100"><div style="font-size:3rem;">📸</div><h5>Nouvelle Prise</h5><p class="text-muted">Publiez votre pêche du jour</p><button class="btn btn-coral" data-bs-toggle="modal" data-bs-target="#priseModal">+ Publier</button></div></div>`;
             } else {
                 actionsDiv.innerHTML += `
-                    <div class="col-md-4">
-                        <div class="card-ocean p-4 text-center h-100" style="border:2px solid #FF6B35;">
-                            <div style="font-size:3rem;">🔒</div>
-                            <h5>Abonnement Requis</h5>
-                            <p class="text-muted">Souscrivez pour publier</p>
-                            <a href="/abonnement" class="btn btn-coral">💳 10 000 Ar/mois</a>
-                        </div>
-                    </div>`;
+                    <div class="col-md-4"><div class="card-ocean p-4 text-center h-100" style="border:2px solid #FF6B35;"><div style="font-size:3rem;">🔒</div><h5>Abonnement Requis</h5><p class="text-muted">Souscrivez pour publier</p><a href="/abonnement" class="btn btn-coral">💳 10 000 Ar/mois</a></div></div>`;
             }
         } else if (currentUser.role === 'acheteur') {
             actionsDiv.innerHTML += `
-                <div class="col-md-4">
-                    <div class="card-ocean p-4 text-center h-100">
-                        <div style="font-size:3rem;">🛒</div>
-                        <h5>Marché</h5>
-                        <p class="text-muted">Voir les prises disponibles</p>
-                        <a href="/marche" class="btn btn-green">Voir le marché</a>
-                    </div>
-                </div>`;
+                <div class="col-md-4"><div class="card-ocean p-4 text-center h-100"><div style="font-size:3rem;">🛒</div><h5>Marché</h5><p class="text-muted">Voir les prises disponibles</p><a href="/marche" class="btn btn-green">Voir le marché</a></div></div>
+                <div class="col-md-4"><div class="card-ocean p-4 text-center h-100"><div style="font-size:3rem;">🛍️</div><h5>Mon Panier</h5><p class="text-muted">Finaliser mes achats</p><a href="/panier" class="btn btn-coral">Voir le panier</a></div></div>`;
         } else if (currentUser.role === 'admin') {
             actionsDiv.innerHTML += `
-                <div class="col-md-4">
-                    <div class="card-ocean p-4 text-center h-100">
-                        <div style="font-size:3rem;">👑</div>
-                        <h5>Administration</h5>
-                        <p class="text-muted">Gérer la plateforme</p>
-                        <a href="/admin" class="btn btn-ocean text-white">Dashboard Admin</a>
-                    </div>
-                </div>`;
+                <div class="col-md-4"><div class="card-ocean p-4 text-center h-100"><div style="font-size:3rem;">👑</div><h5>Administration</h5><p class="text-muted">Gérer la plateforme</p><a href="/admin" class="btn btn-ocean text-white">Dashboard Admin</a></div></div>`;
         }
 
-        // Actions communes
+        // Actions communes à tous
         actionsDiv.innerHTML += `
-            <div class="col-md-4">
-                <div class="card-ocean p-4 text-center h-100">
-                    <div style="font-size:3rem;">🧠</div>
-                    <h5>Prédictions IA</h5>
-                    <p class="text-muted">Espèces probables demain</p>
-                    <a href="/predictions" class="btn btn-ocean text-white">Voir</a>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card-ocean p-4 text-center h-100">
-                    <div style="font-size:3rem;">💬</div>
-                    <h5>Messages</h5>
-                    <p class="text-muted">Chat avec utilisateurs</p>
-                    <a href="/chat" class="btn btn-outline-ocean">Chat</a>
-                </div>
-            </div>`;
+            <div class="col-md-4"><div class="card-ocean p-4 text-center h-100"><div style="font-size:3rem;">🧠</div><h5>Prédictions IA</h5><p class="text-muted">Espèces probables demain</p><a href="/predictions" class="btn btn-ocean text-white">Voir</a></div></div>
+            <div class="col-md-4"><div class="card-ocean p-4 text-center h-100"><div style="font-size:3rem;">💬</div><h5>Messages</h5><p class="text-muted">Chat avec utilisateurs</p><a href="/chat" class="btn btn-outline-ocean">Chat</a></div></div>`;
 
-        // Activité récente
-        const res = await fetch('/api/reservations').then(r => r.json());
-        if (res.success && res.reservations.length > 0) {
-            document.getElementById('activity').innerHTML = res.reservations.slice(0, 5).map(r => `
-                <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
-                    <span>${r.icon || '🐟'} ${r.espece || 'Produit'} - ${r.poids_kg || '?'}kg</span>
-                    <span class="badge bg-${r.statut === 'confirmee' ? 'success' : r.statut === 'en_attente' ? 'warning' : 'secondary'}">
-                        ${r.statut || '?'}
-                    </span>
-                </div>
-            `).join('');
+        // Activité récente (commandes pour acheteur, réservations pour pêcheur)
+        if (currentUser.role === 'acheteur') {
+            const cmdRes = await fetch('/api/commandes').then(r => r.json());
+            if (cmdRes.success && cmdRes.commandes.length > 0) {
+                document.getElementById('activity').innerHTML = cmdRes.commandes.slice(0, 5).map(c => `
+                    <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+                        <span>📦 Commande #${c.id} - ${c.articles?.[0]?.espece || 'Produit'}</span>
+                        <span class="badge bg-${c.statut_livraison === 'livree' ? 'success' : 'warning'}">${c.statut_livraison || '?'}</span>
+                    </div>`).join('');
+            } else {
+                document.getElementById('activity').innerHTML = '<p class="text-muted text-center py-3">Aucune commande récente</p>';
+            }
         } else {
-            document.getElementById('activity').innerHTML = 
-                '<p class="text-muted text-center py-3">Aucune activité récente</p>';
+            const res = await fetch('/api/reservations').then(r => r.json());
+            if (res.success && res.reservations.length > 0) {
+                document.getElementById('activity').innerHTML = res.reservations.slice(0, 5).map(r => `
+                    <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+                        <span>${r.icon || '🐟'} ${r.espece || 'Produit'} - ${r.poids_kg || '?'}kg</span>
+                        <span class="badge bg-${r.statut === 'confirmee' ? 'success' : r.statut === 'en_attente' ? 'warning' : 'secondary'}">${r.statut || '?'}</span>
+                    </div>`).join('');
+            } else {
+                document.getElementById('activity').innerHTML = '<p class="text-muted text-center py-3">Aucune activité récente</p>';
+            }
         }
     }
 
+    // Prévisualisation image
+    function previewImage(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        if (file.size > 16 * 1024 * 1024) { alert('❌ Fichier trop volumineux (max 16 MB)'); return; }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('preview-placeholder').style.display = 'none';
+            document.getElementById('preview-image').src = e.target.result;
+            document.getElementById('preview-image').style.display = 'block';
+            document.getElementById('image-url').value = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Prix suggéré selon espèce
+    function updatePrixSuggere() {
+        const prixSug = {'Thon Jaune': 18000, 'Espadon': 22000, 'Maquereau': 8000, 'Langouste': 35000, 'Crabes': 15000, 'Poulpe': 12000, 'Calmar': 9000};
+        const espece = document.getElementById('espece').value;
+        if (prixSug[espece] && !document.getElementById('prix').value) {
+            document.getElementById('prix').value = prixSug[espece];
+            document.getElementById('prix-suggere').textContent = 'Prix suggéré : ' + prixSug[espece].toLocaleString() + ' Ar/kg';
+        }
+        updateResume();
+    }
+
+    function updateResume() {
+        const espece = document.getElementById('espece').value;
+        const poids = parseFloat(document.getElementById('poids').value) || 0;
+        const prix = parseFloat(document.getElementById('prix').value) || 0;
+        if (espece) {
+            document.getElementById('resume-prise').style.display = 'block';
+            document.getElementById('resume-espece').textContent = espece;
+            document.getElementById('resume-poids').textContent = poids;
+            document.getElementById('resume-prix').textContent = prix.toLocaleString();
+            document.getElementById('resume-total').textContent = (poids * prix).toLocaleString() + ' Ar';
+        }
+    }
+
+    // Publier la prise
     async function publierPrise() {
         const especeSelect = document.getElementById('espece');
-        const data = {
-            espece: especeSelect.value,
-            icon: especeSelect.selectedOptions[0]?.text.split(' ')[0] || '🐟',
-            poids_kg: parseFloat(document.getElementById('poids').value),
-            prix_kg: parseFloat(document.getElementById('prix').value),
-            zone: document.getElementById('zone').value,
-            description: document.getElementById('description').value,
-            port: document.getElementById('portSelect').value
-        };
+        const espece = especeSelect.value;
+        const poids = parseFloat(document.getElementById('poids').value);
+        const prix = parseFloat(document.getElementById('prix').value);
+        
+        if (!espece) { alert('Veuillez choisir une espèce'); return; }
+        if (!poids || poids <= 0) { alert('Poids invalide'); return; }
+        if (!prix || prix <= 0) { alert('Prix invalide'); return; }
 
-        if (!data.espece || !data.poids_kg || !data.prix_kg) {
-            alert('Veuillez remplir tous les champs obligatoires');
-            return;
+        const icones = {'Thon Jaune': '🐟', 'Espadon': '🐠', 'Maquereau': '🎣', 'Langouste': '🦞', 'Crabes': '🦀', 'Poulpe': '🐙', 'Calmar': '🦑'};
+        
+        let imageUrl = document.getElementById('image-url').value;
+        const imageFile = document.getElementById('photo-upload').files[0];
+        
+        // Upload si nouvelle photo
+        if (imageFile && !imageUrl.startsWith('http')) {
+            const formData = new FormData();
+            formData.append('photo', imageFile);
+            try {
+                const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData }).then(r => r.json());
+                if (uploadRes.success) imageUrl = uploadRes.url;
+            } catch (e) {}
+        }
+        
+        // Image par défaut si nécessaire
+        if (!imageUrl || imageUrl.startsWith('data:')) {
+            const defaults = {'Thon Jaune': 'https://images.unsplash.com/photo-1599084993091-1cb5c0721cc6?w=400','Espadon': 'https://images.unsplash.com/photo-1601314272213-8b13a4d49f8d?w=400','Maquereau': 'https://images.unsplash.com/photo-1559742811-8228736914b3?w=400','Langouste': 'https://images.unsplash.com/photo-1553247407-23251ce81f59?w=400','Crabes': 'https://images.unsplash.com/photo-1565680018097-eda39be8df04?w=400','Poulpe': 'https://images.unsplash.com/photo-1615141982883-c7ad0e69fd62?w=400','Calmar': 'https://images.unsplash.com/photo-1599481233317-e0832e3aa0e1?w=400'};
+            imageUrl = defaults[espece] || 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=400';
         }
 
+        const data = {
+            espece: espece, icon: icones[espece] || '🐟', image_url: imageUrl,
+            poids_kg: poids, prix_kg: prix,
+            zone: document.getElementById('zone').value,
+            port: document.getElementById('portSelect').value,
+            qualite: document.getElementById('qualite').value,
+            description: document.getElementById('description').value,
+            categorie: ['Langouste','Crabes'].includes(espece) ? 'crustace' : ['Poulpe','Calmar'].includes(espece) ? 'mollusque' : 'poisson'
+        };
+
         const res = await fetch('/api/prises', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
         }).then(r => r.json());
 
         if (res.success) {
-            alert('✅ ' + res.message);
-            const modal = bootstrap.Modal.getInstance(document.getElementById('priseModal'));
-            if (modal) modal.hide();
-            location.reload();
+            showToast('✅ ' + res.message, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('priseModal')).hide();
+            setTimeout(() => location.reload(), 1000);
         } else {
             if (res.code === 'ABONNEMENT_REQUIS') {
-                alert(res.message);
-                window.location.href = '/abonnement';
+                showToast(res.message, 'error');
+                setTimeout(() => window.location.href = '/abonnement', 1500);
             } else {
-                alert('❌ ' + res.message);
+                showToast('❌ ' + (res.message || 'Erreur'), 'error');
             }
         }
     }
