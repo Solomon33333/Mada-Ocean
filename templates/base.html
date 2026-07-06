@@ -131,18 +131,32 @@
             border-radius: 12px;
             font-weight: 600;
             background: white;
+            transition: all 0.3s;
+        }
+        
+        .btn-outline-ocean:hover {
+            background: var(--ocean-dark);
+            color: white;
+        }
+        
+        .btn-outline-coral {
+            border: 2px solid var(--coral);
+            color: var(--coral);
+            padding: 10px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            background: transparent;
+            transition: all 0.3s;
+        }
+        
+        .btn-outline-coral:hover {
+            background: var(--coral);
+            color: white;
         }
         
         .stat-number {
             font-size: 2rem;
             font-weight: 800;
-        }
-        
-        .badge-status {
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.8rem;
         }
         
         .toast-container {
@@ -165,19 +179,26 @@
             to { transform: rotate(360deg); }
         }
         
-        .hero-text {
-            font-size: 3.5rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #FFD166, #FF6B35);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        
         .footer {
             background: rgba(0, 0, 0, 0.3);
             padding: 20px 0;
             margin-top: auto;
+        }
+        
+        .footer a {
+            transition: color 0.3s;
+        }
+        
+        .footer a:hover {
+            color: var(--coral) !important;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .navbar-ocean .nav-link {
+                padding: 6px 12px !important;
+                font-size: 0.9rem;
+            }
         }
     </style>
 </head>
@@ -193,17 +214,49 @@
             </button>
             <div class="collapse navbar-collapse" id="nav">
                 <ul class="navbar-nav ms-auto align-items-center" id="nav-links">
-                    <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-house"></i> Accueil</a></li>
-                    <li class="nav-item" id="li-dashboard" style="display:none"><a class="nav-link" href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
-                    <li class="nav-item" id="li-marche" style="display:none"><a class="nav-link" href="/marche"><i class="bi bi-shop"></i> Marché</a></li>
-                    <li class="nav-item" id="li-reservations" style="display:none"><a class="nav-link" href="/reservations"><i class="bi bi-calendar-check"></i> Réservations</a></li>
-                    <li class="nav-item" id="li-commandes" style="display:none"><a class="nav-link" href="/commandes"><i class="bi bi-box-seam"></i> Commandes</a></li>
-                    <li class="nav-item" id="li-panier" style="display:none"><a class="nav-link" href="/panier"><i class="bi bi-cart"></i> Panier</a></li>
-                    <li class="nav-item" id="li-predictions" style="display:none"><a class="nav-link" href="/predictions"><i class="bi bi-cpu"></i> IA</a></li>
-                    <li class="nav-item" id="li-chat" style="display:none"><a class="nav-link" href="/chat"><i class="bi bi-chat-dots"></i> Chat</a></li>
-                    <li class="nav-item" id="li-notifications" style="display:none"><a class="nav-link" href="/notifications"><i class="bi bi-bell"></i> <span id="notif-badge" class="badge bg-danger" style="display:none;">0</span></a></li>
-                    <li class="nav-item" id="li-login"><a class="nav-link" href="/connexion"><i class="bi bi-box-arrow-in-right"></i> Connexion</a></li>
-                    <li class="nav-item" id="li-register"><a class="nav-link" href="/inscription"><i class="bi bi-person-plus"></i> Inscription</a></li>
+                    <!-- TOUJOURS VISIBLE -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="bi bi-house"></i> Accueil</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/marche"><i class="bi bi-shop"></i> Marché</a>
+                    </li>
+                    
+                    <!-- VISIBLE SI CONNECTÉ -->
+                    <li class="nav-item" id="li-dashboard" style="display:none">
+                        <a class="nav-link" href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                    </li>
+                    <li class="nav-item" id="li-reservations" style="display:none">
+                        <a class="nav-link" href="/reservations"><i class="bi bi-calendar-check"></i> Réservations</a>
+                    </li>
+                    <li class="nav-item" id="li-commandes" style="display:none">
+                        <a class="nav-link" href="/commandes"><i class="bi bi-box-seam"></i> Commandes</a>
+                    </li>
+                    <li class="nav-item" id="li-panier" style="display:none">
+                        <a class="nav-link" href="/panier"><i class="bi bi-cart"></i> Panier</a>
+                    </li>
+                    <li class="nav-item" id="li-predictions" style="display:none">
+                        <a class="nav-link" href="/predictions"><i class="bi bi-cpu"></i> IA</a>
+                    </li>
+                    <li class="nav-item" id="li-chat" style="display:none">
+                        <a class="nav-link" href="/chat"><i class="bi bi-chat-dots"></i> Chat</a>
+                    </li>
+                    <li class="nav-item" id="li-notifications" style="display:none">
+                        <a class="nav-link" href="/notifications">
+                            <i class="bi bi-bell"></i> 
+                            <span id="notif-badge" class="badge bg-danger" style="display:none;">0</span>
+                        </a>
+                    </li>
+                    
+                    <!-- VISIBLE SI NON CONNECTÉ -->
+                    <li class="nav-item" id="li-login">
+                        <a class="nav-link" href="/connexion"><i class="bi bi-box-arrow-in-right"></i> Connexion</a>
+                    </li>
+                    <li class="nav-item" id="li-register">
+                        <a class="nav-link" href="/inscription"><i class="bi bi-person-plus"></i> Inscription</a>
+                    </li>
+                    
+                    <!-- VISIBLE SI CONNECTÉ (menu dropdown) -->
                     <li class="nav-item dropdown" id="li-user" style="display:none">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                             <i class="bi bi-person-circle"></i> <span id="username-nav"></span>
@@ -231,46 +284,51 @@
     </main>
 
     <!-- Footer -->
-<footer class="footer text-white">
-    <div class="container">
-        <div class="row g-3">
-            <div class="col-md-4">
-                <h6>🌊 Mada Océan Pro</h6>
-                <p class="small opacity-75">La plateforme des pêcheurs Vezo de Tuléar</p>
+    <footer class="footer text-white">
+        <div class="container">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <h6>🌊 Mada Océan Pro</h6>
+                    <p class="small opacity-75">La plateforme des pêcheurs Vezo de Tuléar</p>
+                </div>
+                <div class="col-md-4">
+                    <h6>Liens rapides</h6>
+                    <p class="small mb-1"><a href="/marche" class="text-white-50">🛒 Marché</a></p>
+                    <p class="small mb-1"><a href="/predictions" class="text-white-50">🧠 IA Prédictions</a></p>
+                    <p class="small mb-1"><a href="/abonnement" class="text-white-50">💳 Abonnement</a></p>
+                </div>
+                <div class="col-md-4">
+                    <h6>Contact</h6>
+                    <p class="small opacity-75 mb-1">
+                        <i class="bi bi-telephone"></i> +261 34 81 693 00
+                    </p>
+                    <p class="small opacity-75 mb-1">
+                        <i class="bi bi-envelope"></i> tsimagnefedrazasolomon@gmail.com
+                    </p>
+                    <p class="small opacity-75 mb-0">
+                        <i class="bi bi-geo-alt"></i> Tuléar, Madagascar
+                    </p>
+                </div>
             </div>
-            <div class="col-md-4">
-                <h6>Liens rapides</h6>
-                <p class="small mb-1"><a href="/marche" class="text-white-50">🛒 Marché</a></p>
-                <p class="small mb-1"><a href="/predictions" class="text-white-50">🧠 IA Prédictions</a></p>
-                <p class="small mb-1"><a href="/abonnement" class="text-white-50">💳 Abonnement</a></p>
-            </div>
-            <div class="col-md-4">
-                <h6>Contact</h6>
-                <p class="small opacity-75 mb-1">
-                    <i class="bi bi-telephone"></i> +261 34 81 693 00
-                </p>
-                <p class="small opacity-75 mb-1">
-                    <i class="bi bi-envelope"></i> tsimagnefedrazasolomon@gmail.com
-                </p>
-                <p class="small opacity-75 mb-0">
-                    <i class="bi bi-geo-alt"></i> Tuléar, Madagascar
-                </p>
-            </div>
+            <hr style="border-color: rgba(255,255,255,0.1);">
+            <p class="text-center small opacity-50 mb-0">
+                © 2026 Mada Océan Pro - Développé par Solomon - Tous droits réservés
+            </p>
         </div>
-        <hr style="border-color: rgba(255,255,255,0.1);">
-        <p class="text-center small opacity-50 mb-0">
-            © 2026 Mada Océan Pro - Développé par Solomon - Tous droits réservés
-        </p>
-    </div>
-</footer>
+    </footer>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
+        // ==========================================
+        // VARIABLES GLOBALES
+        // ==========================================
         let currentUser = null;
         
-        // Toast notification
+        // ==========================================
+        // TOAST NOTIFICATION
+        // ==========================================
         function showToast(message, type = 'success') {
             const bg = type === 'success' ? 'bg-success' : type === 'error' ? 'bg-danger' : 'bg-warning';
             const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️';
@@ -288,7 +346,9 @@
             }, 4000);
         }
         
-        // Vérifier auth
+        // ==========================================
+        // VÉRIFIER AUTHENTIFICATION
+        // ==========================================
         async function checkAuth() {
             try {
                 const res = await fetch('/api/me');
@@ -297,14 +357,13 @@
                 if (data.success) {
                     currentUser = data.user;
                     
-                    // Cacher boutons login/register
+                    // Cacher boutons visiteur
                     document.getElementById('li-login').style.display = 'none';
                     document.getElementById('li-register').style.display = 'none';
                     
-                    // Afficher menu utilisateur
+                    // Afficher menu utilisateur connecté
                     document.getElementById('li-user').style.display = 'block';
                     document.getElementById('li-dashboard').style.display = 'block';
-                    document.getElementById('li-marche').style.display = 'block';
                     document.getElementById('li-reservations').style.display = 'block';
                     document.getElementById('li-predictions').style.display = 'block';
                     document.getElementById('li-chat').style.display = 'block';
@@ -321,14 +380,24 @@
                         document.getElementById('li-commandes').style.display = 'block';
                     }
                     
+                    if (currentUser.role === 'admin') {
+                        document.getElementById('li-commandes').style.display = 'block';
+                    }
+                    
                     // Nom utilisateur
                     document.getElementById('username-nav').textContent = 
-                        currentUser.prenom || currentUser.nom;
-                    document.getElementById('userrole-nav').textContent = 
-                        currentUser.role === 'pecheur' ? '🎣 Pêcheur' : 
-                        currentUser.role === 'admin' ? '👑 Admin' : '🏨 Acheteur';
+                        currentUser.prenom || currentUser.nom || 'Utilisateur';
                     
-                    // Notifications
+                    // Rôle utilisateur
+                    const roleLabels = {
+                        'pecheur': '🎣 Pêcheur',
+                        'acheteur': '🏨 Acheteur',
+                        'admin': '👑 Administrateur'
+                    };
+                    document.getElementById('userrole-nav').textContent = 
+                        roleLabels[currentUser.role] || currentUser.role;
+                    
+                    // Notifications non lues
                     try {
                         const notifRes = await fetch('/api/notifications');
                         const notifData = await notifRes.json();
@@ -337,7 +406,9 @@
                             badge.textContent = notifData.nb_non_lues;
                             badge.style.display = 'inline';
                         }
-                    } catch (e) {}
+                    } catch (e) {
+                        // Silencieux
+                    }
                 }
                 return currentUser;
             } catch (e) {
@@ -345,12 +416,21 @@
             }
         }
         
+        // ==========================================
+        // DÉCONNEXION
+        // ==========================================
         async function logout() {
-            await fetch('/api/logout', { method: 'POST' });
+            try {
+                await fetch('/api/logout', { method: 'POST' });
+            } catch (e) {
+                // Silencieux
+            }
             window.location.href = '/';
         }
         
-        // Init
+        // ==========================================
+        // INITIALISATION
+        // ==========================================
         document.addEventListener('DOMContentLoaded', checkAuth);
     </script>
     
