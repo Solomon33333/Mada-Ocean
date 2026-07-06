@@ -30,30 +30,34 @@
                     <option value="prix_croissant">Prix croissant</option>
                     <option value="prix_decroissant">Prix décroissant</option>
                     <option value="note">Mieux notés</option>
+                    <option value="vues">Plus vus</option>
                 </select>
             </div>
             <div class="col-md-3">
                 <input type="text" class="form-control" id="filter-search" 
-                       placeholder="Rechercher..." onkeyup="loadMarket()">
+                       placeholder="🔍 Rechercher un poisson..." onkeyup="loadMarket()">
             </div>
             <div class="col-md-3">
                 <select class="form-select" id="filter-port" onchange="loadMarket()">
                     <option value="">Tous les ports</option>
                     <option value="Mahavatse">Mahavatse</option>
+                    <option value="Mahajanga-by">Mahajanga-by</option>
                     <option value="Anakao">Anakao</option>
                     <option value="Salary">Salary</option>
                     <option value="Saint-Augustin">Saint-Augustin</option>
                     <option value="Ifaty">Ifaty</option>
+                    <option value="Mangarivotra">Mangarivotra</option>
                 </select>
             </div>
         </div>
+        <div class="mt-2 small" id="result-count"></div>
     </div>
 
     <!-- Grille des produits -->
     <div class="row g-3" id="market">
         <div class="col-12 text-center text-white py-5">
             <div class="loading-spinner mx-auto"></div>
-            <p class="mt-3">Chargement des produits...</p>
+            <p class="mt-3">Chargement des produits frais du jour...</p>
         </div>
     </div>
 
@@ -65,9 +69,7 @@
                     <h5 class="modal-title">🛒 Ajouter au panier</h5>
                     <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body" id="panier-modal-body">
-                    <!-- Rempli dynamiquement -->
-                </div>
+                <div class="modal-body" id="panier-modal-body"></div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
                     <button class="btn btn-coral" onclick="ajouterAuPanier()">
@@ -81,178 +83,240 @@
 {% endblock %}
 
 {% block scripts %}
+<style>
+    .product-image {
+        width: 100%;
+        height: 180px;
+        object-fit: cover;
+        border-radius: 12px 12px 0 0;
+        transition: transform 0.3s;
+    }
+    .card-ocean:hover .product-image {
+        transform: scale(1.05);
+    }
+    .price-tag {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #FF6B35;
+    }
+    .stock-badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 1;
+    }
+    .qualite-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 1;
+    }
+</style>
+
 <script>
     let priseSelectionnee = null;
-    //let currentUser = null;
+    // currentUser est déjà défini dans base.html
 
-    // Charger l'utilisateur et le marché
     async function init() {
-        const me = await fetch('/api/me').then(r => r.json());
-        if (me.success) currentUser = me.user;
-        
-        loadMarket();
-        updatePanierCount();
+        await loadMarket();
+        await updatePanierCount();
     }
 
-    // Mettre à jour le compteur du panier
     async function updatePanierCount() {
+        if (!currentUser || currentUser.role !== 'acheteur') return;
         try {
             const res = await fetch('/api/panier').then(r => r.json());
             if (res.success && res.nb_articles > 0) {
                 document.getElementById('panier-count').textContent = res.nb_articles;
                 document.getElementById('panier-count').style.display = 'inline';
-            } else {
-                document.getElementById('panier-count').style.display = 'none';
             }
         } catch (e) {}
     }
 
     async function loadMarket() {
-        const categorie = document.getElementById('filter-categorie')?.value || '';
-        const tri = document.getElementById('filter-tri')?.value || 'recent';
-        const search = document.getElementById('filter-search')?.value || '';
-        const port = document.getElementById('filter-port')?.value || '';
-        
-        let url = '/api/prises?statut=active';
-        if (categorie) url += '&categorie=' + categorie;
-        if (tri) url += '&tri=' + tri;
-        if (search) url += '&search=' + encodeURIComponent(search);
-        if (port) url += '&port=' + encodeURIComponent(port);
-        
-        const res = await fetch(url).then(r => r.json());
-        
-        if (res.success && res.prises.length > 0) {
-            document.getElementById('market').innerHTML = res.prises.map(p => `
-                <div class="col-md-4 col-lg-3 col-6">
-                    <div class="card-ocean p-3 h-100 position-relative">
-                        ${p.qualite === 'A+' ? '<span class="badge bg-success position-absolute top-0 end-0 m-2">Premium</span>' : ''}
-                        <div class="text-center mb-2">
-                            <div style="font-size:3rem;">${p.icon}</div>
+        const params = new URLSearchParams({
+            statut: 'active',
+            categorie: document.getElementById('filter-categorie')?.value || '',
+            tri: document.getElementById('filter-tri')?.value || 'recent',
+            search: document.getElementById('filter-search')?.value || '',
+            port: document.getElementById('filter-port')?.value || ''
+        });
+
+        try {
+            const res = await fetch('/api/prises?' + params.toString()).then(r => r.json());
+
+            if (res.success && res.prises.length > 0) {
+                document.getElementById('result-count').innerHTML = `
+                    <span class="text-success">✅ ${res.prises.length} produit(s) trouvé(s)</span>`;
+
+                document.getElementById('market').innerHTML = res.prises.map(p => `
+                    <div class="col-md-4 col-lg-3 col-6">
+                        <div class="card-ocean h-100 overflow-hidden position-relative">
+                            <!-- Badges -->
+                            ${p.qualite === 'A+' ? '<span class="badge bg-success qualite-badge">Premium</span>' : ''}
+                            ${p.stock_kg < 5 ? '<span class="badge bg-warning text-dark stock-badge">⚠️ Stock limité</span>' : ''}
+                            
+                            <!-- IMAGE RÉELLE -->
+                            <img src="${p.image_url || 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=400'}" 
+                                 alt="${p.espece}" 
+                                 class="product-image"
+                                 onerror="this.src='https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=400'">
+                            
+                            <div class="p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <h6 class="fw-bold mb-0">${p.icon} ${p.espece}</h6>
+                                    <span class="badge bg-info ms-1">⭐ ${p.pecheur_note || '5.0'}</span>
+                                </div>
+                                
+                                <p class="text-muted small mb-2">${(p.description || p.zone || '').substring(0, 45)}${(p.description || '').length > 45 ? '...' : ''}</p>
+                                
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span><strong>${p.stock_kg || 0} kg</strong> dispo</span>
+                                    <span class="small text-muted">👁️ ${p.nb_vues || 0} vues</span>
+                                </div>
+                                
+                                <div class="price-tag mb-1">${(p.prix_kg || 0).toLocaleString()} Ar/kg</div>
+                                <p class="fw-bold text-dark small mb-2">Total: ${(p.prix_total || 0).toLocaleString()} Ar</p>
+                                
+                                <div class="small text-muted mb-2">
+                                    👤 ${p.pecheur_nom || 'Inconnu'}<br>
+                                    📍 ${p.port || 'Tuléar'}
+                                </div>
+                                
+                                <!-- Bouton selon le statut -->
+                                ${currentUser && currentUser.role === 'acheteur' ? `
+                                    <button class="btn btn-coral w-100 btn-sm" onclick="ouvrirPanier(${p.id})">
+                                        <i class="bi bi-cart-plus"></i> Ajouter au panier
+                                    </button>
+                                ` : currentUser ? `
+                                    <div class="alert alert-warning small text-center mb-0 p-2">
+                                        🔒 Réservé aux acheteurs
+                                    </div>
+                                ` : `
+                                    <a href="/connexion?redirect=/marche" class="btn btn-outline-coral w-100 btn-sm">
+                                        🔐 Connectez-vous pour acheter
+                                    </a>
+                                `}
+                            </div>
                         </div>
-                        <h6 class="fw-bold">${p.espece}</h6>
-                        <p class="text-muted small mb-1">${p.description ? p.description.substring(0, 50) + '...' : p.zone}</p>
-                        
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span><strong>${p.stock_kg} kg</strong> dispo</span>
-                            <span class="badge bg-info">⭐ ${p.pecheur_note || '5.0'}</span>
-                        </div>
-                        
-                        <div class="price mb-2">${p.prix_kg?.toLocaleString()} Ar/kg</div>
-                        <p class="fw-bold text-dark">Total: ${p.prix_total?.toLocaleString()} Ar</p>
-                        
-                        <div class="small text-muted mb-2">
-                            👤 ${p.pecheur_nom}<br>
-                            📍 ${p.port} | 👁️ ${p.nb_vues} vues
-                        </div>
-                        
-                        ${currentUser && currentUser.role === 'acheteur' ? `
-                            <button class="btn btn-coral w-100" onclick="ouvrirPanier(${p.id})">
-                                <i class="bi bi-cart-plus"></i> Ajouter au panier
-                            </button>
-                        ` : currentUser ? `
-                            <span class="badge bg-secondary w-100 p-2">Réservé aux acheteurs</span>
-                        ` : `
-                            <a href="/connexion?redirect=/marche" class="btn btn-outline-coral w-100 btn-sm">
-                                🔐 Connectez-vous pour acheter
-                            </a>
-                        `}
                     </div>
-                </div>
-            `).join('');
-        } else {
+                `).join('');
+            } else {
+                document.getElementById('result-count').innerHTML = '';
+                document.getElementById('market').innerHTML = `
+                    <div class="col-12">
+                        <div class="card-ocean p-5 text-center">
+                            <img src="https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=200" 
+                                 alt="Poisson" style="width:100px;border-radius:50%;margin-bottom:15px;">
+                            <h5>Aucun produit disponible</h5>
+                            <p class="text-muted">Revenez plus tard ou modifiez vos filtres.</p>
+                            <button class="btn btn-coral mt-2" onclick="loadMarket()">
+                                <i class="bi bi-arrow-clockwise"></i> Actualiser
+                            </button>
+                        </div>
+                    </div>`;
+            }
+        } catch (err) {
             document.getElementById('market').innerHTML = `
                 <div class="col-12">
                     <div class="card-ocean p-5 text-center">
-                        <div style="font-size:4rem;">🐟</div>
-                        <h5>Aucun produit disponible</h5>
-                        <p class="text-muted">Revenez plus tard ou modifiez vos filtres.</p>
+                        <h5>❌ Erreur de chargement</h5>
+                        <p class="text-muted">${err.message}</p>
+                        <button class="btn btn-coral mt-2" onclick="loadMarket()">Réessayer</button>
                     </div>
                 </div>`;
         }
     }
 
-    // Ouvrir le modal pour choisir la quantité
     async function ouvrirPanier(priseId) {
-        const res = await fetch('/api/prises?statut=active').then(r => r.json());
-        const prise = res.prises.find(p => p.id === priseId);
-        
-        if (!prise) {
-            alert('Produit introuvable');
-            return;
+        try {
+            const res = await fetch('/api/prises?statut=active').then(r => r.json());
+            const prise = res.prises.find(p => p.id === priseId);
+            
+            if (!prise) {
+                alert('Produit introuvable ou déjà vendu');
+                loadMarket();
+                return;
+            }
+            
+            priseSelectionnee = prise;
+            const stockDispo = prise.stock_kg || 0;
+            
+            document.getElementById('panier-modal-body').innerHTML = `
+                <div class="text-center mb-3">
+                    <img src="${prise.image_url || 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=400'}" 
+                         alt="${prise.espece}" 
+                         style="width:100%;height:150px;object-fit:cover;border-radius:12px;"
+                         onerror="this.src='https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=400'">
+                    <h5 class="mt-2">${prise.icon} ${prise.espece}</h5>
+                    <p class="text-muted small">${prise.description || prise.zone || ''}</p>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-bold">⚖️ Quantité (kg)</label>
+                        <input type="number" class="form-control" id="quantite" 
+                               value="1" min="0.5" max="${stockDispo}" step="0.5">
+                        <small class="text-muted">Max : ${stockDispo} kg disponibles</small>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-bold">💰 Prix/kg</label>
+                        <input type="text" class="form-control" value="${(prise.prix_kg || 0).toLocaleString()} Ar" disabled>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info small">
+                    <p class="mb-1">👤 Pêcheur : <strong>${prise.pecheur_nom || 'Inconnu'}</strong> ⭐${prise.pecheur_note || '5.0'}</p>
+                    <p class="mb-1">📍 Port : <strong>${prise.port || 'Tuléar'}</strong></p>
+                    <p class="mb-1">📅 Publié : <strong>${prise.date || 'Récent'}</strong></p>
+                    <p class="mb-1">🏷️ Qualité : <strong>${prise.qualite || 'A'}</strong></p>
+                    <p class="mb-0 fw-bold">💰 Total : <strong id="total-estime" style="color:#FF6B35;">${(prise.prix_kg || 0).toLocaleString()} Ar</strong></p>
+                </div>
+            `;
+            
+            document.getElementById('quantite').addEventListener('input', function() {
+                const qte = parseFloat(this.value) || 0;
+                const total = qte * (prise.prix_kg || 0);
+                document.getElementById('total-estime').textContent = total.toLocaleString() + ' Ar';
+            });
+            
+            new bootstrap.Modal(document.getElementById('panierModal')).show();
+        } catch (err) {
+            alert('Erreur lors du chargement du produit');
         }
-        
-        priseSelectionnee = prise;
-        
-        document.getElementById('panier-modal-body').innerHTML = `
-            <div class="text-center mb-3">
-                <div style="font-size:4rem;">${prise.icon}</div>
-                <h5>${prise.espece}</h5>
-                <p class="text-muted">${prise.description || prise.zone}</p>
-            </div>
-            
-            <div class="row mb-3">
-                <div class="col-6">
-                    <label class="form-label fw-bold">⚖️ Quantité (kg)</label>
-                    <input type="number" class="form-control" id="quantite" 
-                           value="1" min="0.5" max="${prise.stock_kg}" step="0.5">
-                    <small class="text-muted">Max : ${prise.stock_kg} kg</small>
-                </div>
-                <div class="col-6">
-                    <label class="form-label fw-bold">💰 Prix/kg</label>
-                    <input type="text" class="form-control" value="${prise.prix_kg?.toLocaleString()} Ar" disabled>
-                </div>
-            </div>
-            
-            <div class="alert alert-info">
-                <h6>📋 Résumé :</h6>
-                <p class="mb-1">👤 Pêcheur : <strong>${prise.pecheur_nom}</strong> ⭐${prise.pecheur_note}</p>
-                <p class="mb-1">📍 Port : <strong>${prise.port}</strong></p>
-                <p class="mb-0">💰 Total estimé : <strong id="total-estime">${prise.prix_kg?.toLocaleString()} Ar</strong></p>
-            </div>
-        `;
-        
-        // Mettre à jour le total en temps réel
-        document.getElementById('quantite').addEventListener('input', function() {
-            const qte = parseFloat(this.value) || 0;
-            const total = qte * prise.prix_kg;
-            document.getElementById('total-estime').textContent = total.toLocaleString() + ' Ar';
-        });
-        
-        new bootstrap.Modal(document.getElementById('panierModal')).show();
     }
 
-    // Ajouter au panier
     async function ajouterAuPanier() {
         if (!priseSelectionnee) return;
         
-        const quantite = parseFloat(document.getElementById('quantite').value);
-        
-        if (!quantite || quantite <= 0) {
-            alert('Veuillez entrer une quantité valide');
+        if (!currentUser || currentUser.role !== 'acheteur') {
+            window.location.href = '/connexion?redirect=/marche';
             return;
         }
         
-        if (quantite > priseSelectionnee.stock_kg) {
-            alert(`Stock insuffisant. Maximum : ${priseSelectionnee.stock_kg} kg`);
-            return;
-        }
+        const qte = parseFloat(document.getElementById('quantite').value);
+        const stockDispo = priseSelectionnee.stock_kg || 0;
         
-        const res = await fetch('/api/panier/ajouter', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                prise_id: priseSelectionnee.id,
-                quantite_kg: quantite
-            })
-        }).then(r => r.json());
+        if (!qte || qte <= 0) { alert('Quantité invalide'); return; }
+        if (qte > stockDispo) { alert(`Stock insuffisant. Max : ${stockDispo} kg`); return; }
         
-        if (res.success) {
-            alert('✅ ' + res.message);
-            bootstrap.Modal.getInstance(document.getElementById('panierModal')).hide();
-            updatePanierCount();
-            loadMarket();
-        } else {
-            alert('❌ ' + res.message);
+        try {
+            const res = await fetch('/api/panier/ajouter', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({prise_id: priseSelectionnee.id, quantite_kg: qte})
+            }).then(r => r.json());
+            
+            if (res.success) {
+                showToast('✅ ' + res.message, 'success');
+                bootstrap.Modal.getInstance(document.getElementById('panierModal')).hide();
+                updatePanierCount();
+                loadMarket();
+            } else {
+                showToast('❌ ' + (res.message || 'Erreur'), 'error');
+            }
+        } catch (err) {
+            showToast('❌ Erreur lors de l\'ajout au panier', 'error');
         }
     }
 

@@ -7,7 +7,9 @@
         <div class="row align-items-center">
             <div class="col-lg-6 text-white" data-aos="fade-right">
                 <div class="mb-3">
-                    <span class="badge bg-success mb-3">🟢 Plus de 500 pêcheurs connectés</span>
+                    <span class="badge bg-success mb-3" id="hero-badge">
+                        🟢 Chargement...
+                    </span>
                 </div>
                 <h1 style="font-size: 3.5rem; font-weight: 900; line-height: 1.1;">
                     Le poisson frais<br>
@@ -40,19 +42,23 @@
                 </p>
                 {% endif %}
                 
-                <!-- Stats -->
-                <div class="d-flex gap-4 mt-4 flex-wrap">
+                <!-- Stats dynamiques -->
+                <div class="d-flex gap-4 mt-4 flex-wrap" id="hero-stats">
                     <div class="text-center">
-                        <div class="fs-3 fw-bold text-white">150+</div>
+                        <div class="fs-3 fw-bold text-white" id="stat-pecheurs">--</div>
                         <small class="text-white-50">Pêcheurs</small>
                     </div>
                     <div class="text-center">
-                        <div class="fs-3 fw-bold text-white">45+</div>
+                        <div class="fs-3 fw-bold text-white" id="stat-acheteurs">--</div>
                         <small class="text-white-50">Acheteurs</small>
                     </div>
                     <div class="text-center">
-                        <div class="fs-3 fw-bold text-white">2.5M</div>
+                        <div class="fs-3 fw-bold text-white" id="stat-volume">--</div>
                         <small class="text-white-50">Ar transactions</small>
+                    </div>
+                    <div class="text-center">
+                        <div class="fs-3 fw-bold text-white" id="stat-prises">--</div>
+                        <small class="text-white-50">Prises actives</small>
                     </div>
                 </div>
             </div>
@@ -161,4 +167,45 @@
         50% { transform: translateY(-20px); }
     }
 </style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Charger les vraies statistiques depuis l'API
+    async function loadRealStats() {
+        try {
+            const res = await fetch('/api/stats');
+            const data = await res.json();
+            
+            if (data.success) {
+                const s = data.stats;
+                
+                // Mettre à jour les stats du hero
+                document.getElementById('stat-pecheurs').textContent = (s.pecheurs || 0) + '+';
+                document.getElementById('stat-acheteurs').textContent = (s.acheteurs || 0) + '+';
+                document.getElementById('stat-volume').textContent = ((s.volume_transactions || 0) / 1000000).toFixed(1) + 'M';
+                document.getElementById('stat-prises').textContent = (s.prises_actives || 0);
+                
+                // Mettre à jour le badge
+                const totalUsers = (s.pecheurs || 0) + (s.acheteurs || 0);
+                document.getElementById('hero-badge').textContent = 
+                    `🟢 ${totalUsers}+ utilisateurs connectés | ${s.prises_actives || 0} prises disponibles`;
+            }
+        } catch (err) {
+            console.log('Stats non disponibles, valeurs par défaut');
+            // Valeurs par défaut si l'API échoue
+            document.getElementById('stat-pecheurs').textContent = '150+';
+            document.getElementById('stat-acheteurs').textContent = '45+';
+            document.getElementById('stat-volume').textContent = '2.5M';
+            document.getElementById('stat-prises').textContent = '6';
+            document.getElementById('hero-badge').textContent = '🟢 Plus de 195 utilisateurs connectés';
+        }
+    }
+    
+    // Charger au démarrage
+    loadRealStats();
+    
+    // Rafraîchir les stats toutes les 30 secondes
+    setInterval(loadRealStats, 30000);
+</script>
 {% endblock %}
