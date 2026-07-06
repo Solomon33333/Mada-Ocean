@@ -482,6 +482,83 @@ def api_creer_prise():
     if tel in users: users[tel]['total_ventes'] = users[tel].get('total_ventes', 0) + 1
     return jsonify({'success': True, 'message': f'✅ {nouvelle["icon"]} {nouvelle["espece"]} publié !', 'prise': nouvelle})
 
+
+# ==========================================
+# API MODIFIER UNE PRISE
+# ==========================================
+@app.route('/api/prises/<int:prise_id>', methods=['PUT'])
+@login_required
+@pecheur_required
+@abonnement_required
+def api_modifier_prise(prise_id):
+    """Modifier une prise existante (pêcheur propriétaire uniquement)"""
+    data = request.json
+    
+    # Trouver la prise
+    prise = next((p for p in prises if p['id'] == prise_id), None)
+    if not prise:
+        return jsonify({'success': False, 'message': 'Prise introuvable'}), 404
+    
+    # Vérifier que le pêcheur est le propriétaire
+    if prise['pecheur_id'] != session['user_id']:
+        return jsonify({'success': False, 'message': 'Non autorisé - Cette prise ne vous appartient pas'}), 403
+    
+    # Vérifier que la prise est encore modifiable (active)
+    if prise['statut'] not in ['active']:
+        return jsonify({'success': False, 'message': 'Seules les prises actives peuvent être modifiées'}), 400
+    
+    # Modifier les champs
+    if 'espece' in data: prise['espece'] = data['espece']
+    if 'icon' in data: prise['icon'] = data['icon']
+    if 'image_url' in data: prise['image_url'] = data['image_url']
+    if 'poids_kg' in data:
+        prise['poids_kg'] = float(data['poids_kg'])
+        prise['stock_kg'] = float(data['poids_kg'])
+        prise['prix_total'] = prise['poids_kg'] * prise['prix_kg']
+    if 'prix_kg' in data:
+        prise['prix_kg'] = float(data['prix_kg'])
+        prise['prix_total'] = prise['poids_kg'] * prise['prix_kg']
+    if 'description' in data: prise['description'] = data['description']
+    if 'zone' in data: prise['zone'] = data['zone']
+    if 'port' in data: prise['port'] = data['port']
+    if 'qualite' in data: prise['qualite'] = data['qualite']
+    
+    return jsonify({
+        'success': True,
+        'message': f'✅ {prise["icon"]} {prise["espece"]} modifié avec succès !',
+        'prise': prise
+    })
+
+# ==========================================
+# API SUPPRIMER UNE PRISE
+# ==========================================
+@app.route('/api/prises/<int:prise_id>', methods=['DELETE'])
+@login_required
+@pecheur_required
+def api_supprimer_prise(prise_id):
+    """Supprimer une prise (pêcheur propriétaire uniquement)"""
+    
+    # Trouver la prise
+    prise = next((p for p in prises if p['id'] == prise_id), None)
+    if not prise:
+        return jsonify({'success': False, 'message': 'Prise introuvable'}), 404
+    
+    # Vérifier que le pêcheur est le propriétaire
+    if prise['pecheur_id'] != session['user_id']:
+        return jsonify({'success': False, 'message': 'Non autorisé - Cette prise ne vous appartient pas'}), 403
+    
+    # Vérifier que la prise est encore supprimable (active)
+    if prise['statut'] not in ['active']:
+        return jsonify({'success': False, 'message': 'Seules les prises actives peuvent être supprimées'}), 400
+    
+    # Supprimer la prise
+    prises.remove(prise)
+    
+    return jsonify({
+        'success': True,
+        'message': f'🗑️ {prise["icon"]} {prise["espece"]} supprimé avec succès !'
+    })
+
 # ==========================================
 # API PANIER
 # ==========================================

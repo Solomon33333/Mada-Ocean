@@ -8,11 +8,12 @@
             <div class="card-ocean p-0" style="overflow:hidden;">
                 <div class="p-3" style="background:#0B3D5C;color:white;">
                     <h5 class="mb-0"><i class="bi bi-chat-dots"></i> Conversations</h5>
+                    <small class="text-white-50" id="user-role-info"></small>
                 </div>
                 <div class="p-2" style="max-height:500px;overflow-y:auto;" id="contacts-list">
                     <div class="text-center text-muted py-3">
                         <div class="loading-spinner mx-auto" style="width:30px;height:30px;border-width:3px;"></div>
-                        <small>Chargement...</small>
+                        <small>Chargement des contacts...</small>
                     </div>
                 </div>
             </div>
@@ -26,7 +27,10 @@
                     <div style="font-size:2rem;" id="contact-avatar">💬</div>
                     <div>
                         <h6 class="mb-0" id="contact-name">Sélectionnez une conversation</h6>
-                        <small class="text-white-50" id="contact-role"></small>
+                        <small class="text-white-50" id="contact-info"></small>
+                    </div>
+                    <div class="ms-auto">
+                        <small class="text-white-50" id="contact-phone"></small>
                     </div>
                 </div>
 
@@ -34,7 +38,7 @@
                 <div class="p-3" style="height:400px;overflow-y:auto;background:#f8f9fa;" id="messages">
                     <div class="text-center text-muted py-5">
                         <div style="font-size:4rem;">💬</div>
-                        <p>Sélectionnez un contact pour commencer</p>
+                        <p id="chat-placeholder">Sélectionnez un contact pour démarrer</p>
                     </div>
                 </div>
 
@@ -47,7 +51,10 @@
                             <i class="bi bi-send"></i> Envoyer
                         </button>
                     </div>
-                    <small class="text-muted">Appuyez sur Entrée pour envoyer</small>
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle"></i> 
+                        <span id="chat-hint">Appuyez sur Entrée pour envoyer</span>
+                    </small>
                 </div>
             </div>
         </div>
@@ -57,23 +64,13 @@
 
 {% block scripts %}
 <script>
-    //let currentUser = null;
+    // currentUser est déjà dans base.html
     let conversations = [];
     let activeConversation = null;
-
-    // Contacts disponibles
-    const contacts = {
-        1: {nom: 'Hery Mahavita', role: 'pecheur', avatar: '🎣', telephone: '0341234567'},
-        2: {nom: 'Solo Velonjara', role: 'pecheur', avatar: '🎣', telephone: '0342345678'},
-        3: {nom: 'Jean Rakotomalala', role: 'pecheur', avatar: '🎣', telephone: '0343456789'},
-        4: {nom: 'Mamy Mananjara', role: 'pecheur', avatar: '🎣', telephone: '0344567890'},
-        10: {nom: 'Hotel Bakuba', role: 'acheteur', avatar: '🏨', telephone: '0341231234'},
-        11: {nom: 'Restaurant Le Pirate', role: 'acheteur', avatar: '🍽️', telephone: '0342342345'},
-        12: {nom: 'Le Paradisier', role: 'acheteur', avatar: '🏩', telephone: '0343453456'},
-    };
+    let allUsers = []; // Tous les utilisateurs sauf soi-même
 
     async function init() {
-        // Charger l'utilisateur
+        // Vérifier l'authentification
         const me = await fetch('/api/me').then(r => r.json());
         if (!me.success) {
             window.location.href = '/connexion?redirect=/chat';
@@ -81,58 +78,107 @@
         }
         currentUser = me.user;
 
-        // Construire la liste des contacts (exclure soi-même)
+        // Afficher le rôle dans la sidebar
+        const roleLabels = {'pecheur': '🎣 Pêcheur', 'acheteur': '🏨 Acheteur', 'admin': '👑 Admin'};
+        document.getElementById('user-role-info').textContent = roleLabels[currentUser.role] || '';
+
+        // Charger tous les utilisateurs disponibles pour ce rôle
+        await loadAvailableContacts();
+        
+        // Charger les conversations existantes
+        await loadConversations();
+        
+        afficherContacts();
+    }
+
+    async function loadAvailableContacts() {
+        // Charger depuis l'API ou utiliser les données en mémoire
+        try {
+            const res = await fetch('/api/me').then(r => r.json());
+            if (res.success) {
+                // Selon le rôle, charger les contacts appropriés
+                if (currentUser.role === 'pecheur') {
+                    // Un pêcheur peut parler aux acheteurs
+                    allUsers = [
+                        {id: 10, nom: 'Hotel Bakuba', role: 'acheteur', avatar: '🏨', telephone: '0341231234'},
+                        {id: 11, nom: 'Restaurant Le Pirate', role: 'acheteur', avatar: '🍽️', telephone: '0342342345'},
+                        {id: 12, nom: 'Le Paradisier', role: 'acheteur', avatar: '🏩', telephone: '0343453456'},
+                    ];
+                } else if (currentUser.role === 'acheteur') {
+                    // Un acheteur peut parler aux pêcheurs
+                    allUsers = [
+                        {id: 1, nom: 'Hery Mahavita', role: 'pecheur', avatar: '🎣', telephone: '0341234567', note: 4.8, port: 'Mahavatse'},
+                        {id: 2, nom: 'Solo Velonjara', role: 'pecheur', avatar: '🎣', telephone: '0342345678', note: 4.6, port: 'Mahajanga-by'},
+                    ];
+                } else {
+                    // Admin voit tout le monde
+                    allUsers = [
+                        {id: 1, nom: 'Hery Mahavita', role: 'pecheur', avatar: '🎣', telephone: '0341234567'},
+                        {id: 2, nom: 'Solo Velonjara', role: 'pecheur', avatar: '🎣', telephone: '0342345678'},
+                        {id: 10, nom: 'Hotel Bakuba', role: 'acheteur', avatar: '🏨', telephone: '0341231234'},
+                        {id: 11, nom: 'Restaurant Le Pirate', role: 'acheteur', avatar: '🍽️', telephone: '0342342345'},
+                    ];
+                }
+            }
+        } catch (e) {
+            console.error('Erreur chargement contacts:', e);
+        }
+    }
+
+    async function loadConversations() {
         conversations = [];
-        for (const [id, contact] of Object.entries(contacts)) {
-            if (parseInt(id) !== currentUser.id) {
-                // Vérifier s'il y a des messages avec ce contact
-                const res = await fetch(`/api/messages?with=${id}`).then(r => r.json());
-                const lastMsg = res.success && res.messages.length > 0 ? 
-                    res.messages[res.messages.length - 1] : null;
+        
+        for (const contact of allUsers) {
+            if (contact.id !== currentUser.id) {
+                // Vérifier les messages existants avec ce contact
+                const res = await fetch(`/api/messages?with=${contact.id}`).then(r => r.json());
+                const msgs = res.success ? res.messages : [];
+                const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
                 
                 conversations.push({
-                    id: parseInt(id),
                     ...contact,
                     lastMessage: lastMsg ? lastMsg.message.substring(0, 50) : null,
                     lastDate: lastMsg ? lastMsg.date : null,
-                    unread: res.success ? res.messages.filter(m => !m.lu && m.from_id !== currentUser.id).length : 0
+                    unread: msgs.filter(m => !m.lu && m.from_id !== currentUser.id).length,
+                    messageCount: msgs.length
                 });
             }
         }
 
-        // Trier : messages récents d'abord
+        // Trier : ceux avec messages récents d'abord
         conversations.sort((a, b) => {
             if (!a.lastDate && !b.lastDate) return 0;
             if (!a.lastDate) return 1;
             if (!b.lastDate) return -1;
-            return new Date(b.lastDate) - new Date(a.lastDate);
+            return new Date(b.lastDate + ' ' + (new Date().getFullYear())) - new Date(a.lastDate + ' ' + (new Date().getFullYear()));
         });
-
-        afficherContacts();
-        loadMessages();
     }
 
     function afficherContacts() {
+        const contactList = document.getElementById('contacts-list');
+        
         if (conversations.length === 0) {
-            document.getElementById('contacts-list').innerHTML = `
+            contactList.innerHTML = `
                 <div class="text-center text-muted py-3">
-                    <small>Aucune conversation</small>
+                    <small>Aucun contact disponible</small>
                 </div>`;
             return;
         }
 
-        document.getElementById('contacts-list').innerHTML = conversations.map(c => `
+        contactList.innerHTML = conversations.map(c => `
             <div class="contact-item p-3 ${activeConversation && activeConversation.id === c.id ? 'active' : ''}" 
                  onclick="selectConversation(${c.id})" style="cursor:pointer;">
                 <div class="d-flex align-items-center gap-2">
                     <span style="font-size:1.8rem;">${c.avatar}</span>
                     <div class="flex-grow-1">
                         <strong>${c.nom}</strong>
-                        <br><small class="text-muted">${c.lastMessage || 'Aucun message'}</small>
+                        ${c.note ? `<span class="badge bg-info ms-1">⭐${c.note}</span>` : ''}
+                        <br><small class="text-muted">${c.lastMessage || '📱 Aucun message'}</small>
                     </div>
                     <div class="text-end">
                         ${c.unread > 0 ? `<span class="badge bg-danger">${c.unread}</span>` : ''}
                         ${c.lastDate ? `<br><small class="text-muted">${c.lastDate}</small>` : ''}
+                        ${c.messageCount > 0 ? `<br><small class="text-muted">${c.messageCount} msg</small>` : ''}
                     </div>
                 </div>
             </div>
@@ -149,13 +195,18 @@
         // Mettre à jour l'en-tête
         document.getElementById('contact-avatar').textContent = contact.avatar;
         document.getElementById('contact-name').textContent = contact.nom;
-        document.getElementById('contact-role').textContent = 
-            contact.role === 'pecheur' ? '🎣 Pêcheur' : '🏨 Acheteur';
+        
+        let infoText = contact.role === 'pecheur' ? '🎣 Pêcheur' : '🏨 Acheteur';
+        if (contact.port) infoText += ` • 📍 ${contact.port}`;
+        if (contact.note) infoText += ` • ⭐ ${contact.note}/5`;
+        document.getElementById('contact-info').textContent = infoText;
+        document.getElementById('contact-phone').textContent = contact.telephone ? `📱 ${contact.telephone}` : '';
 
         // Activer la saisie
         document.getElementById('msgInput').disabled = false;
         document.getElementById('sendBtn').disabled = false;
         document.getElementById('msgInput').focus();
+        document.getElementById('chat-hint').textContent = `Écrivez à ${contact.nom}...`;
 
         // Mettre à jour la liste
         afficherContacts();
@@ -169,33 +220,34 @@
 
         const res = await fetch(`/api/messages?with=${activeConversation.id}`).then(r => r.json());
         
-        if (res.success) {
-            if (res.messages.length === 0) {
-                document.getElementById('messages').innerHTML = `
-                    <div class="text-center text-muted py-5">
-                        <div style="font-size:3rem;">👋</div>
-                        <p>Démarrez la conversation avec ${activeConversation.nom}</p>
-                        <small>Vos messages sont privés et sécurisés</small>
-                    </div>`;
-            } else {
-                document.getElementById('messages').innerHTML = res.messages.map(m => `
-                    <div class="mb-2 ${m.from_id === currentUser.id ? 'text-end' : ''}">
-                        ${m.from_id !== currentUser.id ? 
-                            `<small class="text-muted ms-2">${activeConversation.avatar} ${activeConversation.nom}</small>` : 
-                            '<small class="text-muted me-2">Vous</small>'}
-                        <div class="d-inline-block ${m.from_id === currentUser.id ? 'msg-sent' : 'msg-received'}" 
-                             style="max-width:75%;">
-                            <div>${m.message}</div>
-                            <small class="${m.from_id === currentUser.id ? 'text-white-50' : 'text-muted'}">${m.date}</small>
-                        </div>
+        const messagesDiv = document.getElementById('messages');
+        
+        if (res.success && res.messages.length > 0) {
+            messagesDiv.innerHTML = res.messages.map(m => `
+                <div class="mb-2 ${m.from_id === currentUser.id ? 'text-end' : ''}">
+                    ${m.from_id !== currentUser.id ? 
+                        `<small class="text-muted ms-2">${activeConversation.avatar} ${activeConversation.nom}</small>` : 
+                        '<small class="text-muted me-2">Vous</small>'}
+                    <div class="d-inline-block ${m.from_id === currentUser.id ? 'msg-sent' : 'msg-received'}" 
+                         style="max-width:75%;">
+                        <div>${m.message}</div>
+                        <small class="${m.from_id === currentUser.id ? 'text-white-50' : 'text-muted'}">
+                            ${m.date} ${m.from_id === currentUser.id ? (m.lu ? '✓✓' : '✓') : ''}
+                        </small>
                     </div>
-                `).join('');
-            }
-            
-            // Scroll en bas
-            const msgDiv = document.getElementById('messages');
-            msgDiv.scrollTop = msgDiv.scrollHeight;
+                </div>
+            `).join('');
+        } else {
+            messagesDiv.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <div style="font-size:3rem;">👋</div>
+                    <p>Démarrez la conversation avec <strong>${activeConversation.nom}</strong></p>
+                    <small>💬 Les messages sont privés et en temps réel</small>
+                </div>`;
         }
+        
+        // Scroll en bas
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 
     async function sendMsg() {
@@ -205,25 +257,31 @@
         if (!msg) return;
 
         // Envoyer le message
-        await fetch('/api/messages', {
+        const res = await fetch('/api/messages', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 to_id: activeConversation.id,
                 message: msg
             })
-        });
+        }).then(r => r.json());
 
-        // Mettre à jour le dernier message dans la conversation
-        const conv = conversations.find(c => c.id === activeConversation.id);
-        if (conv) {
-            conv.lastMessage = msg.substring(0, 50);
-            conv.lastDate = new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+        if (res.success) {
+            // Mettre à jour la conversation
+            const conv = conversations.find(c => c.id === activeConversation.id);
+            if (conv) {
+                conv.lastMessage = msg.substring(0, 50);
+                conv.lastDate = new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+                conv.messageCount = (conv.messageCount || 0) + 1;
+            }
+
+            document.getElementById('msgInput').value = '';
+            afficherContacts();
+            loadMessages();
+            
+            // Notification pour informer que le message a été envoyé
+            showToast(`✅ Message envoyé à ${activeConversation.nom}`, 'success');
         }
-
-        document.getElementById('msgInput').value = '';
-        afficherContacts();
-        loadMessages();
     }
 
     // Envoyer avec Entrée
@@ -234,15 +292,13 @@
         }
     });
 
-    // Rafraîchir les messages toutes les 5 secondes
+    // Rafraîchir les messages
     setInterval(() => {
         if (activeConversation) loadMessages();
-    }, 5000);
+        loadConversations().then(() => afficherContacts());
+    }, 10000); // Toutes les 10 secondes
 
-    // Initialiser
-    init();
-
-    // Ajouter styles
+    // Styles
     const style = document.createElement('style');
     style.textContent = `
         .msg-sent {
@@ -251,6 +307,7 @@
             border-radius: 15px 15px 5px 15px;
             padding: 10px 15px;
             max-width: 75%;
+            word-wrap: break-word;
         }
         .msg-received {
             background: white;
@@ -258,6 +315,7 @@
             padding: 10px 15px;
             max-width: 75%;
             border: 1px solid #eee;
+            word-wrap: break-word;
         }
         .contact-item {
             transition: all 0.2s;
@@ -272,5 +330,8 @@
         }
     `;
     document.head.appendChild(style);
+
+    // Initialiser
+    init();
 </script>
 {% endblock %}
