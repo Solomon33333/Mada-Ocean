@@ -7,17 +7,17 @@
         <div class="modal-content" style="border-radius:20px;">
             <div class="modal-header" style="background:#0B3D5C;color:white;border-radius:20px 20px 0 0;">
                 <h5 class="modal-title">📸 Nouvelle Prise</h5>
-                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal" id="close-modal-btn"></button>
             </div>
             <div class="modal-body">
-                <form id="priseForm">
+                <form id="priseForm" novalidate>
                     <div class="row g-3">
                         <!-- Colonne gauche : Formulaire -->
                         <div class="col-md-7">
                             <div class="mb-3">
                                 <label class="form-label fw-bold">🐟 Espèce <span class="text-danger">*</span></label>
-                                <select class="form-select" id="espece" required onchange="updatePrixSuggere()">
-                                    <option value="">Choisir...</option>
+                                <select class="form-select" id="espece" required onchange="updatePrixSuggere(); checkFormValid();">
+                                    <option value="">-- Choisir un poisson --</option>
                                     <option value="Thon Jaune">🐟 Thon Jaune</option>
                                     <option value="Espadon">🐠 Espadon</option>
                                     <option value="Maquereau">🎣 Maquereau</option>
@@ -26,23 +26,26 @@
                                     <option value="Poulpe">🐙 Poulpe</option>
                                     <option value="Calmar">🦑 Calmar</option>
                                 </select>
+                                <small class="text-danger" id="error-espece" style="display:none;">⚠️ Choisis un poisson</small>
                             </div>
                             
                             <div class="row mb-3">
                                 <div class="col-6">
                                     <label class="form-label fw-bold">⚖️ Poids (kg) <span class="text-danger">*</span></label>
-                                    <input type="number" class="form-control" id="poids" placeholder="Ex: 25" step="0.1" required oninput="updateResume()">
+                                    <input type="number" class="form-control" id="poids" placeholder="Ex: 25" step="0.1" min="0.1" required oninput="updateResume(); checkFormValid();">
+                                    <small class="text-danger" id="error-poids" style="display:none;">⚠️ Entre un poids valide</small>
                                 </div>
                                 <div class="col-6">
                                     <label class="form-label fw-bold">💰 Prix/kg (Ar) <span class="text-danger">*</span></label>
-                                    <input type="number" class="form-control" id="prix" placeholder="Ex: 18000" required oninput="updateResume()">
+                                    <input type="number" class="form-control" id="prix" placeholder="Ex: 18000" min="100" required oninput="updateResume(); checkFormValid();">
                                     <small class="text-muted" id="prix-suggere"></small>
+                                    <small class="text-danger" id="error-prix" style="display:none;">⚠️ Entre un prix valide</small>
                                 </div>
                             </div>
                             
                             <div class="mb-3">
                                 <label class="form-label fw-bold">📍 Zone de pêche</label>
-                                <input type="text" class="form-control" id="zone" placeholder="Ex: 5 km au large de Mangarivotra">
+                                <input type="text" class="form-control" id="zone" placeholder="Où as-tu pêché ?">
                             </div>
                             
                             <div class="mb-3">
@@ -69,39 +72,44 @@
                             
                             <div class="mb-3">
                                 <label class="form-label fw-bold">📝 Description</label>
-                                <textarea class="form-control" id="description" rows="2" placeholder="Décrivez votre prise..."></textarea>
+                                <textarea class="form-control" id="description" rows="2" placeholder="Décris ta prise..."></textarea>
                             </div>
                         </div>
                         
                         <!-- Colonne droite : Photo -->
                         <div class="col-md-5 text-center">
-                            <label class="form-label fw-bold">📸 Photo de la prise</label>
-                            <div class="mb-2" id="preview-container" style="width:100%;height:200px;border:2px dashed #ddd;border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+                            <label class="form-label fw-bold">📸 Photo (optionnel)</label>
+                            <div class="mb-2" id="preview-container" style="width:100%;height:200px;border:2px dashed #ddd;border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#f9f9f9;">
                                 <span class="text-muted" id="preview-placeholder">
-                                    <i class="bi bi-camera" style="font-size:3rem;"></i><br>Aperçu
+                                    <i class="bi bi-camera" style="font-size:3rem;"></i><br>
+                                    <small>Ajouter une photo</small>
                                 </span>
-                                <img id="preview-image" src="" alt="Prévisualisation" style="display:none;width:100%;height:100%;object-fit:cover;">
+                                <img id="preview-image" src="" alt="Photo" style="display:none;width:100%;height:100%;object-fit:cover;">
                             </div>
                             <input type="file" class="form-control" id="photo-upload" accept="image/*" onchange="previewImage(event)">
-                            <small class="text-muted">JPG, PNG, GIF, WEBP - Max 16 MB</small>
+                            <small class="text-muted">JPG, PNG - Max 16 MB</small>
                             <input type="hidden" id="image-url" value="">
                         </div>
                     </div>
                     
                     <!-- Résumé -->
                     <div class="alert alert-info mt-3" id="resume-prise" style="display:none;">
-                        <h6>📋 Résumé</h6>
-                        <p class="mb-1">🐟 <strong id="resume-espece">-</strong></p>
-                        <p class="mb-1">⚖️ <strong id="resume-poids">-</strong> kg</p>
-                        <p class="mb-1">💰 <strong id="resume-prix">-</strong> Ar/kg</p>
-                        <p class="mb-0 fw-bold">💵 Total : <strong id="resume-total" style="color:#FF6B35;">-</strong> Ar</p>
+                        <h6>📋 Résumé de ta prise</h6>
+                        <div class="row">
+                            <div class="col-6"><small>🐟 Poisson</small><br><strong id="resume-espece">-</strong></div>
+                            <div class="col-6"><small>⚖️ Poids</small><br><strong id="resume-poids">-</strong> kg</div>
+                            <div class="col-6"><small>💰 Prix/kg</small><br><strong id="resume-prix">-</strong> Ar</div>
+                            <div class="col-6"><small>💵 Prix total</small><br><strong id="resume-total" style="color:#FF6B35;">-</strong> Ar</div>
+                        </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                <button class="btn btn-coral" onclick="publierPrise()">
-                    <i class="bi bi-cloud-upload"></i> 📢 Publier la prise
+                <button class="btn btn-secondary" data-bs-dismiss="modal" onclick="resetForm()">
+                    <i class="bi bi-x-circle"></i> Annuler
+                </button>
+                <button class="btn btn-coral" id="btn-publier" onclick="publierPrise()" disabled>
+                    <i class="bi bi-cloud-upload"></i> 📢 Publier
                 </button>
             </div>
         </div>
@@ -131,17 +139,220 @@
 
 {% block scripts %}
 <script>
-    // currentUser est déjà dans base.html
+    // ==========================================
+    // FONCTIONS DU FORMULAIRE
+    // ==========================================
+    
+    // Vérifier si le formulaire est valide
+    function checkFormValid() {
+        const espece = document.getElementById('espece').value;
+        const poids = parseFloat(document.getElementById('poids').value);
+        const prix = parseFloat(document.getElementById('prix').value);
+        const btn = document.getElementById('btn-publier');
+        
+        // Vérifier chaque champ obligatoire
+        let valid = true;
+        
+        // Espèce
+        if (!espece) {
+            document.getElementById('error-espece').style.display = 'block';
+            valid = false;
+        } else {
+            document.getElementById('error-espece').style.display = 'none';
+        }
+        
+        // Poids
+        if (!poids || poids <= 0) {
+            document.getElementById('error-poids').style.display = 'block';
+            valid = false;
+        } else {
+            document.getElementById('error-poids').style.display = 'none';
+        }
+        
+        // Prix
+        if (!prix || prix <= 0) {
+            document.getElementById('error-prix').style.display = 'block';
+            valid = false;
+        } else {
+            document.getElementById('error-prix').style.display = 'none';
+        }
+        
+        // Activer/désactiver le bouton
+        btn.disabled = !valid;
+        
+        // Changer l'apparence du bouton
+        if (valid) {
+            btn.classList.remove('btn-secondary');
+            btn.classList.add('btn-coral');
+            btn.innerHTML = '<i class="bi bi-cloud-upload"></i> 📢 Publier la prise';
+        } else {
+            btn.classList.remove('btn-coral');
+            btn.classList.add('btn-secondary');
+            btn.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Remplis les champs *';
+        }
+        
+        return valid;
+    }
 
+    // Prévisualisation image
+    function previewImage(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        if (file.size > 16 * 1024 * 1024) { 
+            showToast('❌ Photo trop grande (max 16 MB)', 'error'); 
+            event.target.value = '';
+            return; 
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('preview-placeholder').style.display = 'none';
+            document.getElementById('preview-image').src = e.target.result;
+            document.getElementById('preview-image').style.display = 'block';
+            document.getElementById('image-url').value = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Prix suggéré
+    function updatePrixSuggere() {
+        const prixSug = {
+            'Thon Jaune': 18000, 'Espadon': 22000, 'Maquereau': 8000, 
+            'Langouste': 35000, 'Crabes': 15000, 'Poulpe': 12000, 'Calmar': 9000
+        };
+        const espece = document.getElementById('espece').value;
+        if (prixSug[espece]) {
+            document.getElementById('prix-suggere').textContent = '💡 Prix conseillé : ' + prixSug[espece].toLocaleString() + ' Ar/kg';
+            if (!document.getElementById('prix').value) {
+                document.getElementById('prix').value = prixSug[espece];
+            }
+        }
+        updateResume();
+        checkFormValid();
+    }
+
+    function updateResume() {
+        const espece = document.getElementById('espece').value;
+        const poids = parseFloat(document.getElementById('poids').value) || 0;
+        const prix = parseFloat(document.getElementById('prix').value) || 0;
+        
+        if (espece) {
+            document.getElementById('resume-prise').style.display = 'block';
+            document.getElementById('resume-espece').textContent = espece;
+            document.getElementById('resume-poids').textContent = poids || '-';
+            document.getElementById('resume-prix').textContent = prix ? prix.toLocaleString() : '-';
+            document.getElementById('resume-total').textContent = (poids && prix) ? (poids * prix).toLocaleString() + ' Ar' : '-';
+        }
+    }
+
+    // Réinitialiser le formulaire
+    function resetForm() {
+        document.getElementById('priseForm').reset();
+        document.getElementById('preview-placeholder').style.display = 'block';
+        document.getElementById('preview-image').style.display = 'none';
+        document.getElementById('resume-prise').style.display = 'none';
+        document.getElementById('error-espece').style.display = 'none';
+        document.getElementById('error-poids').style.display = 'none';
+        document.getElementById('error-prix').style.display = 'none';
+        document.getElementById('btn-publier').disabled = true;
+        document.getElementById('btn-publier').classList.remove('btn-coral');
+        document.getElementById('btn-publier').classList.add('btn-secondary');
+        document.getElementById('btn-publier').innerHTML = '<i class="bi bi-exclamation-triangle"></i> Remplis les champs *';
+    }
+
+    // Publier la prise
+    async function publierPrise() {
+        const btn = document.getElementById('btn-publier');
+        
+        // Vérifier formulaire
+        if (!checkFormValid()) return;
+        
+        const especeSelect = document.getElementById('espece');
+        const espece = especeSelect.value;
+        const poids = parseFloat(document.getElementById('poids').value);
+        const prix = parseFloat(document.getElementById('prix').value);
+        
+        // Désactiver le bouton et montrer le chargement
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Publication...';
+        
+        const icones = {'Thon Jaune': '🐟', 'Espadon': '🐠', 'Maquereau': '🎣', 'Langouste': '🦞', 'Crabes': '🦀', 'Poulpe': '🐙', 'Calmar': '🦑'};
+        
+        let imageUrl = document.getElementById('image-url').value;
+        const imageFile = document.getElementById('photo-upload').files[0];
+        
+        // Upload si nouvelle photo
+        if (imageFile && !imageUrl.startsWith('http')) {
+            const formData = new FormData();
+            formData.append('photo', imageFile);
+            try {
+                const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData }).then(r => r.json());
+                if (uploadRes.success) imageUrl = uploadRes.url;
+            } catch (e) {}
+        }
+        
+        // Image par défaut
+        if (!imageUrl || imageUrl.startsWith('data:')) {
+            const defaults = {
+                'Thon Jaune': 'https://images.unsplash.com/photo-1599084993091-1cb5c0721cc6?w=400',
+                'Espadon': 'https://images.unsplash.com/photo-1601314272213-8b13a4d49f8d?w=400',
+                'Maquereau': 'https://images.unsplash.com/photo-1559742811-8228736914b3?w=400',
+                'Langouste': 'https://images.unsplash.com/photo-1553247407-23251ce81f59?w=400',
+                'Crabes': 'https://images.unsplash.com/photo-1565680018097-eda39be8df04?w=400',
+                'Poulpe': 'https://images.unsplash.com/photo-1615141982883-c7ad0e69fd62?w=400',
+                'Calmar': 'https://images.unsplash.com/photo-1599481233317-e0832e3aa0e1?w=400'
+            };
+            imageUrl = defaults[espece] || 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=400';
+        }
+
+        const data = {
+            espece: espece, icon: icones[espece] || '🐟', image_url: imageUrl,
+            poids_kg: poids, prix_kg: prix,
+            zone: document.getElementById('zone').value,
+            port: document.getElementById('portSelect').value,
+            qualite: document.getElementById('qualite').value,
+            description: document.getElementById('description').value,
+            categorie: ['Langouste','Crabes'].includes(espece) ? 'crustace' : ['Poulpe','Calmar'].includes(espece) ? 'mollusque' : 'poisson'
+        };
+
+        try {
+            const res = await fetch('/api/prises', {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+            }).then(r => r.json());
+
+            if (res.success) {
+                showToast('✅ ' + res.message, 'success');
+                resetForm();
+                bootstrap.Modal.getInstance(document.getElementById('priseModal')).hide();
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                if (res.code === 'ABONNEMENT_REQUIS') {
+                    showToast(res.message, 'error');
+                    setTimeout(() => window.location.href = '/abonnement', 1500);
+                } else {
+                    showToast('❌ ' + (res.message || 'Erreur'), 'error');
+                    // Réactiver le bouton
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-cloud-upload"></i> 📢 Publier la prise';
+                }
+            }
+        } catch (err) {
+            showToast('❌ Erreur de connexion', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-cloud-upload"></i> 📢 Publier la prise';
+        }
+    }
+
+    // ==========================================
+    // CHARGEMENT DU DASHBOARD
+    // ==========================================
     async function load() {
         const me = await fetch('/api/me').then(r => r.json());
         if (!me.success) { window.location.href = '/connexion'; return; }
 
         currentUser = me.user;
-        document.getElementById('welcome').textContent = 
-            `👋 Bonjour ${currentUser.prenom || currentUser.nom} !`;
+        document.getElementById('welcome').textContent = `👋 Bonjour ${currentUser.prenom || currentUser.nom} !`;
 
-        // Badge rôle
         const roleBadge = document.getElementById('role-badge');
         if (currentUser.role === 'pecheur') {
             if (currentUser.abonnement_actif) {
@@ -159,169 +370,53 @@
             roleBadge.className = 'badge bg-primary fs-6';
         }
 
-        // Stats depuis l'API
+        // Stats
         const stats = await fetch('/api/stats').then(r => r.json());
         if (stats.success) {
             const s = stats.stats;
             document.getElementById('stats').innerHTML = `
-                <div class="col-md-3 col-6"><div class="card-ocean p-3 text-center"><div class="stat-number" style="color:#FF6B35">${s.prises_actives}</div><small class="text-muted">🐟 Prises actives</small></div></div>
-                <div class="col-md-3 col-6"><div class="card-ocean p-3 text-center"><div class="stat-number" style="color:#0B3D5C">${s.pecheurs}</div><small class="text-muted">🎣 Pêcheurs</small></div></div>
-                <div class="col-md-3 col-6"><div class="card-ocean p-3 text-center"><div class="stat-number" style="color:#00A896">${s.acheteurs}</div><small class="text-muted">🏨 Acheteurs</small></div></div>
-                <div class="col-md-3 col-6"><div class="card-ocean p-3 text-center"><div class="stat-number" style="color:#FFD166">${((s.volume_transactions || 0) / 1000000).toFixed(1)}M</div><small class="text-muted">💰 Volume (Ar)</small></div></div>`;
+                <div class="col-md-3 col-6"><div class="card-ocean p-3 text-center"><div class="stat-number" style="color:#FF6B35">${s.prises_actives}</div><small>🐟 Prises</small></div></div>
+                <div class="col-md-3 col-6"><div class="card-ocean p-3 text-center"><div class="stat-number" style="color:#0B3D5C">${s.pecheurs}</div><small>🎣 Pêcheurs</small></div></div>
+                <div class="col-md-3 col-6"><div class="card-ocean p-3 text-center"><div class="stat-number" style="color:#00A896">${s.acheteurs}</div><small>🏨 Acheteurs</small></div></div>
+                <div class="col-md-3 col-6"><div class="card-ocean p-3 text-center"><div class="stat-number" style="color:#FFD166">${((s.volume_transactions || 0)/1000000).toFixed(1)}M</div><small>💰 Volume</small></div></div>`;
         }
 
-        // Actions selon le rôle
+        // Actions
         const actionsDiv = document.getElementById('actions');
         actionsDiv.innerHTML = '';
-
+        
         if (currentUser.role === 'pecheur') {
             if (currentUser.abonnement_actif) {
-                actionsDiv.innerHTML += `
-                    <div class="col-md-4"><div class="card-ocean p-4 text-center h-100"><div style="font-size:3rem;">📸</div><h5>Nouvelle Prise</h5><p class="text-muted">Publiez votre pêche du jour</p><button class="btn btn-coral" data-bs-toggle="modal" data-bs-target="#priseModal">+ Publier</button></div></div>`;
+                actionsDiv.innerHTML += `<div class="col-md-4"><div class="card-ocean p-4 text-center h-100"><div style="font-size:3rem;">📸</div><h5>Nouvelle Prise</h5><p class="text-muted">Publie ta pêche du jour</p><button class="btn btn-coral" data-bs-toggle="modal" data-bs-target="#priseModal" onclick="resetForm()">+ Publier</button></div></div>`;
             } else {
-                actionsDiv.innerHTML += `
-                    <div class="col-md-4"><div class="card-ocean p-4 text-center h-100" style="border:2px solid #FF6B35;"><div style="font-size:3rem;">🔒</div><h5>Abonnement Requis</h5><p class="text-muted">Souscrivez pour publier</p><a href="/abonnement" class="btn btn-coral">💳 10 000 Ar/mois</a></div></div>`;
+                actionsDiv.innerHTML += `<div class="col-md-4"><div class="card-ocean p-4 text-center h-100" style="border:2px solid #FF6B35;"><div style="font-size:3rem;">🔒</div><h5>Abonnement Requis</h5><p class="text-muted">10 000 Ar/mois</p><a href="/abonnement" class="btn btn-coral">💳 S'abonner</a></div></div>`;
             }
         } else if (currentUser.role === 'acheteur') {
-            actionsDiv.innerHTML += `
-                <div class="col-md-4"><div class="card-ocean p-4 text-center h-100"><div style="font-size:3rem;">🛒</div><h5>Marché</h5><p class="text-muted">Voir les prises disponibles</p><a href="/marche" class="btn btn-green">Voir le marché</a></div></div>
-                <div class="col-md-4"><div class="card-ocean p-4 text-center h-100"><div style="font-size:3rem;">🛍️</div><h5>Mon Panier</h5><p class="text-muted">Finaliser mes achats</p><a href="/panier" class="btn btn-coral">Voir le panier</a></div></div>`;
-        } else if (currentUser.role === 'admin') {
-            actionsDiv.innerHTML += `
-                <div class="col-md-4"><div class="card-ocean p-4 text-center h-100"><div style="font-size:3rem;">👑</div><h5>Administration</h5><p class="text-muted">Gérer la plateforme</p><a href="/admin" class="btn btn-ocean text-white">Dashboard Admin</a></div></div>`;
+            actionsDiv.innerHTML += `<div class="col-md-4"><div class="card-ocean p-4 text-center h-100"><div style="font-size:3rem;">🛒</div><h5>Marché</h5><a href="/marche" class="btn btn-green">Voir</a></div></div>`;
+            actionsDiv.innerHTML += `<div class="col-md-4"><div class="card-ocean p-4 text-center h-100"><div style="font-size:3rem;">🛍️</div><h5>Panier</h5><a href="/panier" class="btn btn-coral">Voir</a></div></div>`;
         }
+        
+        actionsDiv.innerHTML += `<div class="col-md-4"><div class="card-ocean p-4 text-center h-100"><div style="font-size:3rem;">🧠</div><h5>IA Météo</h5><a href="/predictions" class="btn btn-ocean text-white">Voir</a></div></div>`;
 
-        // Actions communes à tous
-        actionsDiv.innerHTML += `
-            <div class="col-md-4"><div class="card-ocean p-4 text-center h-100"><div style="font-size:3rem;">🧠</div><h5>Prédictions IA</h5><p class="text-muted">Espèces probables demain</p><a href="/predictions" class="btn btn-ocean text-white">Voir</a></div></div>
-            <div class="col-md-4"><div class="card-ocean p-4 text-center h-100"><div style="font-size:3rem;">💬</div><h5>Messages</h5><p class="text-muted">Chat avec utilisateurs</p><a href="/chat" class="btn btn-outline-ocean">Chat</a></div></div>`;
-
-        // Activité récente (commandes pour acheteur, réservations pour pêcheur)
-        if (currentUser.role === 'acheteur') {
-            const cmdRes = await fetch('/api/commandes').then(r => r.json());
-            if (cmdRes.success && cmdRes.commandes.length > 0) {
-                document.getElementById('activity').innerHTML = cmdRes.commandes.slice(0, 5).map(c => `
-                    <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
-                        <span>📦 Commande #${c.id} - ${c.articles?.[0]?.espece || 'Produit'}</span>
-                        <span class="badge bg-${c.statut_livraison === 'livree' ? 'success' : 'warning'}">${c.statut_livraison || '?'}</span>
-                    </div>`).join('');
-            } else {
-                document.getElementById('activity').innerHTML = '<p class="text-muted text-center py-3">Aucune commande récente</p>';
-            }
+        // Activité
+        const res = await fetch('/api/reservations').then(r => r.json());
+        if (res.success && res.reservations.length > 0) {
+            document.getElementById('activity').innerHTML = res.reservations.slice(0,5).map(r => `
+                <div class="d-flex justify-content-between p-2 border-bottom">
+                    <span>${r.icon||'🐟'} ${r.espece||''} - ${r.poids_kg||0}kg</span>
+                    <span class="badge bg-${r.statut==='confirmee'?'success':'warning'}">${r.statut}</span>
+                </div>`).join('');
         } else {
-            const res = await fetch('/api/reservations').then(r => r.json());
-            if (res.success && res.reservations.length > 0) {
-                document.getElementById('activity').innerHTML = res.reservations.slice(0, 5).map(r => `
-                    <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
-                        <span>${r.icon || '🐟'} ${r.espece || 'Produit'} - ${r.poids_kg || '?'}kg</span>
-                        <span class="badge bg-${r.statut === 'confirmee' ? 'success' : r.statut === 'en_attente' ? 'warning' : 'secondary'}">${r.statut || '?'}</span>
-                    </div>`).join('');
-            } else {
-                document.getElementById('activity').innerHTML = '<p class="text-muted text-center py-3">Aucune activité récente</p>';
-            }
+            document.getElementById('activity').innerHTML = '<p class="text-muted text-center py-3">Aucune activité</p>';
         }
     }
 
-    // Prévisualisation image
-    function previewImage(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        if (file.size > 16 * 1024 * 1024) { alert('❌ Fichier trop volumineux (max 16 MB)'); return; }
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('preview-placeholder').style.display = 'none';
-            document.getElementById('preview-image').src = e.target.result;
-            document.getElementById('preview-image').style.display = 'block';
-            document.getElementById('image-url').value = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    }
-
-    // Prix suggéré selon espèce
-    function updatePrixSuggere() {
-        const prixSug = {'Thon Jaune': 18000, 'Espadon': 22000, 'Maquereau': 8000, 'Langouste': 35000, 'Crabes': 15000, 'Poulpe': 12000, 'Calmar': 9000};
-        const espece = document.getElementById('espece').value;
-        if (prixSug[espece] && !document.getElementById('prix').value) {
-            document.getElementById('prix').value = prixSug[espece];
-            document.getElementById('prix-suggere').textContent = 'Prix suggéré : ' + prixSug[espece].toLocaleString() + ' Ar/kg';
-        }
-        updateResume();
-    }
-
-    function updateResume() {
-        const espece = document.getElementById('espece').value;
-        const poids = parseFloat(document.getElementById('poids').value) || 0;
-        const prix = parseFloat(document.getElementById('prix').value) || 0;
-        if (espece) {
-            document.getElementById('resume-prise').style.display = 'block';
-            document.getElementById('resume-espece').textContent = espece;
-            document.getElementById('resume-poids').textContent = poids;
-            document.getElementById('resume-prix').textContent = prix.toLocaleString();
-            document.getElementById('resume-total').textContent = (poids * prix).toLocaleString() + ' Ar';
-        }
-    }
-
-    // Publier la prise
-    async function publierPrise() {
-        const especeSelect = document.getElementById('espece');
-        const espece = especeSelect.value;
-        const poids = parseFloat(document.getElementById('poids').value);
-        const prix = parseFloat(document.getElementById('prix').value);
-        
-        if (!espece) { alert('Veuillez choisir une espèce'); return; }
-        if (!poids || poids <= 0) { alert('Poids invalide'); return; }
-        if (!prix || prix <= 0) { alert('Prix invalide'); return; }
-
-        const icones = {'Thon Jaune': '🐟', 'Espadon': '🐠', 'Maquereau': '🎣', 'Langouste': '🦞', 'Crabes': '🦀', 'Poulpe': '🐙', 'Calmar': '🦑'};
-        
-        let imageUrl = document.getElementById('image-url').value;
-        const imageFile = document.getElementById('photo-upload').files[0];
-        
-        // Upload si nouvelle photo
-        if (imageFile && !imageUrl.startsWith('http')) {
-            const formData = new FormData();
-            formData.append('photo', imageFile);
-            try {
-                const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData }).then(r => r.json());
-                if (uploadRes.success) imageUrl = uploadRes.url;
-            } catch (e) {}
-        }
-        
-        // Image par défaut si nécessaire
-        if (!imageUrl || imageUrl.startsWith('data:')) {
-            const defaults = {'Thon Jaune': 'https://images.unsplash.com/photo-1599084993091-1cb5c0721cc6?w=400','Espadon': 'https://images.unsplash.com/photo-1601314272213-8b13a4d49f8d?w=400','Maquereau': 'https://images.unsplash.com/photo-1559742811-8228736914b3?w=400','Langouste': 'https://images.unsplash.com/photo-1553247407-23251ce81f59?w=400','Crabes': 'https://images.unsplash.com/photo-1565680018097-eda39be8df04?w=400','Poulpe': 'https://images.unsplash.com/photo-1615141982883-c7ad0e69fd62?w=400','Calmar': 'https://images.unsplash.com/photo-1599481233317-e0832e3aa0e1?w=400'};
-            imageUrl = defaults[espece] || 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=400';
-        }
-
-        const data = {
-            espece: espece, icon: icones[espece] || '🐟', image_url: imageUrl,
-            poids_kg: poids, prix_kg: prix,
-            zone: document.getElementById('zone').value,
-            port: document.getElementById('portSelect').value,
-            qualite: document.getElementById('qualite').value,
-            description: document.getElementById('description').value,
-            categorie: ['Langouste','Crabes'].includes(espece) ? 'crustace' : ['Poulpe','Calmar'].includes(espece) ? 'mollusque' : 'poisson'
-        };
-
-        const res = await fetch('/api/prises', {
-            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
-        }).then(r => r.json());
-
-        if (res.success) {
-            showToast('✅ ' + res.message, 'success');
-            bootstrap.Modal.getInstance(document.getElementById('priseModal')).hide();
-            setTimeout(() => location.reload(), 1000);
-        } else {
-            if (res.code === 'ABONNEMENT_REQUIS') {
-                showToast(res.message, 'error');
-                setTimeout(() => window.location.href = '/abonnement', 1500);
-            } else {
-                showToast('❌ ' + (res.message || 'Erreur'), 'error');
-            }
-        }
-    }
-
+    // Initialiser
     load();
+    
+    // Désactiver le bouton au départ
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('btn-publier').disabled = true;
+    });
 </script>
 {% endblock %}
