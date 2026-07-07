@@ -79,6 +79,40 @@
             </div>
         </div>
     </div>
+
+    // Dans loadMarket(), après le bouton "Ajouter au panier"
+${currentUser && currentUser.role === 'pecheur' && currentUser.id === p.pecheur_id ? `
+    <div class="d-flex gap-1 mt-2">
+        <button class="btn btn-outline-warning btn-sm flex-grow-1" onclick="ouvrirModifier(${p.id})">
+            <i class="bi bi-pencil"></i> Modifier
+        </button>
+        <button class="btn btn-outline-danger btn-sm flex-grow-1" onclick="supprimerPrise(${p.id})">
+            <i class="bi bi-trash"></i> Supprimer
+        </button>
+    </div>
+` : ''}
+
+<!-- Modal Modifier une prise -->
+<div class="modal fade" id="modifierModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius:20px;">
+            <div class="modal-header" style="background:#FFD166;color:#333;border-radius:20px 20px 0 0;">
+                <h5 class="modal-title">✏️ Modifier la prise</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modifier-modal-body">
+                <!-- Rempli dynamiquement -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button class="btn btn-warning" onclick="enregistrerModification()">
+                    <i class="bi bi-check-circle"></i> Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+    
 </div>
 {% endblock %}
 
@@ -319,6 +353,139 @@
             showToast('❌ Erreur lors de l\'ajout au panier', 'error');
         }
     }
+let priseAModifier = null;
+
+// Ouvrir le modal de modification
+async function ouvrirModifier(priseId) {
+    const res = await fetch('/api/prises?statut=active').then(r => r.json());
+    const prise = res.prises.find(p => p.id === priseId);
+    
+    if (!prise) { alert('Prise introuvable'); return; }
+    if (prise.pecheur_id !== currentUser.id) { alert('Non autorisé'); return; }
+    
+    priseAModifier = prise;
+    
+    document.getElementById('modifier-modal-body').innerHTML = `
+        <div class="row g-3">
+            <div class="col-md-7">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">🐟 Espèce</label>
+                    <select class="form-select" id="modif-espece">
+                        <option value="Thon Jaune" ${prise.espece === 'Thon Jaune' ? 'selected' : ''}>🐟 Thon Jaune</option>
+                        <option value="Espadon" ${prise.espece === 'Espadon' ? 'selected' : ''}>🐠 Espadon</option>
+                        <option value="Maquereau" ${prise.espece === 'Maquereau' ? 'selected' : ''}>🎣 Maquereau</option>
+                        <option value="Langouste" ${prise.espece === 'Langouste' ? 'selected' : ''}>🦞 Langouste</option>
+                        <option value="Crabes" ${prise.espece === 'Crabes' ? 'selected' : ''}>🦀 Crabes</option>
+                        <option value="Poulpe" ${prise.espece === 'Poulpe' ? 'selected' : ''}>🐙 Poulpe</option>
+                        <option value="Calmar" ${prise.espece === 'Calmar' ? 'selected' : ''}>🦑 Calmar</option>
+                    </select>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-bold">⚖️ Poids (kg)</label>
+                        <input type="number" class="form-control" id="modif-poids" value="${prise.poids_kg}" step="0.1">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-bold">💰 Prix/kg (Ar)</label>
+                        <input type="number" class="form-control" id="modif-prix" value="${prise.prix_kg}">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">📍 Zone de pêche</label>
+                    <input type="text" class="form-control" id="modif-zone" value="${prise.zone || ''}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">📝 Description</label>
+                    <textarea class="form-control" id="modif-description" rows="2">${prise.description || ''}</textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">⭐ Qualité</label>
+                    <select class="form-select" id="modif-qualite">
+                        <option value="A+" ${prise.qualite === 'A+' ? 'selected' : ''}>A+ - Exceptionnelle</option>
+                        <option value="A" ${prise.qualite === 'A' ? 'selected' : ''}>A - Très bonne</option>
+                        <option value="B+" ${prise.qualite === 'B+' ? 'selected' : ''}>B+ - Bonne</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-5 text-center">
+                <label class="form-label fw-bold">📸 Photo actuelle</label>
+                <img src="${prise.image_url || 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=400'}" 
+                     style="width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:10px;">
+                <input type="file" class="form-control" id="modif-photo" accept="image/*" onchange="previewModifImage(event)">
+                <input type="hidden" id="modif-image-url" value="${prise.image_url || ''}">
+            </div>
+        </div>
+    `;
+    
+    new bootstrap.Modal(document.getElementById('modifierModal')).show();
+}
+
+// Prévisualisation image modification
+function previewModifImage(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        document.getElementById('modif-image-url').value = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+// Enregistrer les modifications
+async function enregistrerModification() {
+    if (!priseAModifier) return;
+    
+    const data = {
+        espece: document.getElementById('modif-espece').value,
+        poids_kg: parseFloat(document.getElementById('modif-poids').value),
+        prix_kg: parseFloat(document.getElementById('modif-prix').value),
+        zone: document.getElementById('modif-zone').value,
+        description: document.getElementById('modif-description').value,
+        qualite: document.getElementById('modif-qualite').value,
+        image_url: document.getElementById('modif-image-url').value
+    };
+    
+    const icones = {'Thon Jaune': '🐟', 'Espadon': '🐠', 'Maquereau': '🎣', 'Langouste': '🦞', 'Crabes': '🦀', 'Poulpe': '🐙', 'Calmar': '🦑'};
+    data.icon = icones[data.espece] || '🐟';
+    
+    try {
+        const res = await fetch(`/api/prises/${priseAModifier.id}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        }).then(r => r.json());
+        
+        if (res.success) {
+            showToast('✅ ' + res.message, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('modifierModal')).hide();
+            loadMarket();
+        } else {
+            showToast('❌ ' + res.message, 'error');
+        }
+    } catch (err) {
+        showToast('❌ Erreur lors de la modification', 'error');
+    }
+}
+
+// Supprimer une prise
+async function supprimerPrise(priseId) {
+    if (!confirm('🗑️ Voulez-vous vraiment supprimer cette prise ? Cette action est irréversible.')) return;
+    
+    try {
+        const res = await fetch(`/api/prises/${priseId}`, {
+            method: 'DELETE'
+        }).then(r => r.json());
+        
+        if (res.success) {
+            showToast('🗑️ ' + res.message, 'success');
+            loadMarket();
+        } else {
+            showToast('❌ ' + res.message, 'error');
+        }
+    } catch (err) {
+        showToast('❌ Erreur lors de la suppression', 'error');
+    }
+}
 
     init();
 </script>
