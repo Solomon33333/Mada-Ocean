@@ -2,94 +2,149 @@
 
 {% block content %}
 <div class="container mt-4">
-    <!-- En-tête -->
+    <!-- En-tête simple -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="text-white">🧠 Prédictions IA</h2>
+        <h2 class="text-white">🧠 Météo Pêche</h2>
         <div>
-            <button class="btn btn-outline-light btn-sm me-2" onclick="load()">
+            <button class="btn btn-coral btn-sm me-2" onclick="load()">
                 <i class="bi bi-arrow-clockwise"></i> Actualiser
             </button>
             <a href="/dashboard" class="btn btn-outline-light btn-sm">
-                <i class="bi bi-speedometer2"></i> Dashboard
+                <i class="bi bi-house"></i> Accueil
             </a>
         </div>
     </div>
 
-    <!-- Carte météo -->
+    <!-- Carte météo simplifiée -->
     <div class="card-ocean p-4 mb-4" id="meteo-card">
         <div class="text-center">
             <div class="loading-spinner mx-auto"></div>
-            <p>Chargement des données météo...</p>
+            <p>Chargement de la météo...</p>
         </div>
     </div>
 
-    <!-- Résumé IA -->
-    <div class="card-ocean p-4 mb-4" id="resume-ia" style="display:none;">
-        <div class="d-flex align-items-center gap-3 flex-wrap">
-            <div style="font-size:3rem;">🤖</div>
-            <div class="flex-grow-1">
-                <h5 class="mb-1">Intelligence Artificielle</h5>
-                <p class="text-muted mb-0" id="ia-message"></p>
-                <small class="text-muted" id="ia-modele"></small>
-                <br>
-                <small class="text-muted" id="ia-nb-donnees"></small>
-                <br>
-                <small class="text-muted" id="ia-date-maj"></small>
-            </div>
-            <div class="text-center">
-                <div id="ia-confiance" style="font-size:2rem;font-weight:800;"></div>
-                <small class="text-muted">Confiance</small>
+    <!-- Message important -->
+    <div class="card-ocean p-4 mb-4" id="message-important" style="display:none; background: linear-gradient(135deg, #FFF8E1, #FFF3E0); border-left: 5px solid #FF6B35;">
+        <div class="d-flex align-items-center gap-3">
+            <div style="font-size:3rem;">📢</div>
+            <div>
+                <h5 class="mb-1" style="color:#FF6B35;">Conseil du jour</h5>
+                <p class="mb-0" id="conseil-principal"></p>
             </div>
         </div>
     </div>
 
-    <!-- Prédictions -->
-    <h4 class="text-white mb-3">📊 Espèces probables pour <span id="date-cible"></span></h4>
+    <!-- Poisson le plus probable -->
+    <div class="card-ocean p-4 mb-4 text-center" id="top-poisson" style="display:none;">
+        <h5 class="text-muted mb-3">🥇 Poisson le plus probable demain</h5>
+        <div id="top-poisson-content"></div>
+    </div>
+
+    <!-- Liste des autres poissons -->
+    <h5 class="text-white mb-3">📋 Autres poissons possibles</h5>
     <div id="predictions">
         <div class="text-center text-white py-5">
             <div class="loading-spinner mx-auto"></div>
-            <p class="mt-3">L'IA analyse les données...</p>
+            <p class="mt-3">Analyse en cours...</p>
         </div>
     </div>
 
-    <!-- Conseils -->
-    <div class="card-ocean p-4 mt-4" id="conseils" style="display:none;">
-        <h5>💡 Conseils pour les pêcheurs</h5>
-        <ul class="mb-0" id="conseils-liste"></ul>
+    <!-- Conseils pratiques -->
+    <div class="card-ocean p-4 mt-4" id="conseils" style="display:none; background:#F0FFF0; border-left: 5px solid #00A896;">
+        <h5 style="color:#00A896;">💡 Conseils pour demain</h5>
+        <ul class="mb-0" id="conseils-liste" style="list-style: none; padding-left: 0;"></ul>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<style>
+    /* Barres de progression épaisses et visibles */
+    .progress-thick {
+        height: 35px !important;
+        border-radius: 20px !important;
+        font-size: 1rem;
+        font-weight: bold;
+    }
+    
+    /* Cartes poissons avec bordures colorées */
+    .fish-card-top {
+        border: 3px solid #FFD166;
+        background: linear-gradient(135deg, #FFFFF0, #FFF8E1);
+    }
+    
+    /* Cercles de couleur pour la météo */
+    .meteo-circle {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 8px;
+        font-size: 2rem;
+    }
+    .meteo-good { background: #D4EDDA; }
+    .meteo-warning { background: #FFF3CD; }
+    .meteo-bad { background: #F8D7DA; }
+    
+    /* Texte plus grand pour lecture facile */
+    .big-text { font-size: 1.2rem; }
+    .huge-text { font-size: 2.5rem; font-weight: 800; }
+    
+    /* Étiquettes simples */
+    .tag {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    .tag-green { background: #D4EDDA; color: #155724; }
+    .tag-orange { background: #FFF3CD; color: #856404; }
+    .tag-red { background: #F8D7DA; color: #721C24; }
+    .tag-blue { background: #CCE5FF; color: #004085; }
+</style>
+
 <script>
-    // Prix moyens réels par espèce (Ar/kg) - basés sur le marché de Tuléar
     const PRIX_MARCHE = {
         'Thon Jaune': {min: 12000, max: 22000, moyen: 18000},
-        'Thon': {min: 12000, max: 22000, moyen: 18000},
         'Espadon': {min: 16000, max: 28000, moyen: 22000},
         'Maquereau': {min: 5000, max: 10000, moyen: 8000},
         'Langouste': {min: 25000, max: 45000, moyen: 35000},
         'Crabes': {min: 10000, max: 20000, moyen: 15000},
-        'Crabe': {min: 10000, max: 20000, moyen: 15000},
         'Poulpe': {min: 8000, max: 16000, moyen: 12000},
         'Calmar': {min: 6000, max: 12000, moyen: 9000},
-        'Poisson Perroquet': {min: 4000, max: 8000, moyen: 6000},
-        'Sardine': {min: 2000, max: 5000, moyen: 3500},
-        'Mérou': {min: 15000, max: 30000, moyen: 22000},
-        'Barracuda': {min: 8000, max: 15000, moyen: 12000},
     };
 
-    // Saisons de pêche réelles à Tuléar (mois de l'année)
     const SAISONS_PECHE = {
-        'Thon Jaune': {debut: 3, fin: 11, pic: [5, 6, 7, 8, 9]},
-        'Espadon': {debut: 5, fin: 9, pic: [6, 7, 8]},
-        'Maquereau': {debut: 1, fin: 12, pic: [4, 5, 6, 7, 8, 9, 10]},
-        'Langouste': {debut: 3, fin: 8, pic: [4, 5, 6]},
-        'Crabes': {debut: 1, fin: 12, pic: [11, 12, 1, 2, 3]},
-        'Poulpe': {debut: 2, fin: 10, pic: [4, 5, 6, 7]},
-        'Calmar': {debut: 3, fin: 9, pic: [5, 6, 7]},
-        'Sardine': {debut: 4, fin: 10, pic: [6, 7, 8]},
+        'Thon Jaune': {debut: 3, fin: 11, pic: [5,6,7,8,9]},
+        'Espadon': {debut: 5, fin: 9, pic: [6,7,8]},
+        'Maquereau': {debut: 1, fin: 12, pic: [4,5,6,7,8,9,10]},
+        'Langouste': {debut: 3, fin: 8, pic: [4,5,6]},
+        'Crabes': {debut: 1, fin: 12, pic: [11,12,1,2,3]},
+        'Poulpe': {debut: 2, fin: 10, pic: [4,5,6,7]},
+        'Calmar': {debut: 3, fin: 9, pic: [5,6,7]},
     };
+
+    function getMeteoEmoji(vent, pluie) {
+        if (pluie > 5) return '🌧️';
+        if (vent > 25) return '💨';
+        if (vent < 10) return '☀️';
+        return '🌤️';
+    }
+
+    function getMerMessage(vent) {
+        if (vent < 10) return 'Mer calme - Bon pour pêcher';
+        if (vent < 20) return 'Mer un peu agitée - Prudence';
+        return 'Mer agitée - Attention danger';
+    }
+
+    function getMerClass(vent) {
+        if (vent < 10) return 'meteo-good';
+        if (vent < 20) return 'meteo-warning';
+        return 'meteo-bad';
+    }
 
     async function load() {
         try {
@@ -97,151 +152,141 @@
             
             if (res.success) {
                 const p = res.prediction;
+                const meteo = p.meteo || {};
+                const vent = parseFloat(meteo.vent) || 15;
+                const pluie = parseFloat(meteo.precipitation) || 0;
                 
-                // Date cible
-                document.getElementById('date-cible').textContent = p.date_cible;
+                // Carte météo simplifiée
+                document.getElementById('meteo-card').innerHTML = `
+                    <h5 class="text-center mb-3">🌤️ Météo demain - ${p.date_cible}</h5>
+                    <div class="row g-3 text-center">
+                        <div class="col-4">
+                            <div class="meteo-circle ${getMerClass(vent)}">
+                                <span>${getMeteoEmoji(vent, pluie)}</span>
+                            </div>
+                            <strong>${getMerMessage(vent)}</strong>
+                        </div>
+                        <div class="col-4">
+                            <div class="meteo-circle meteo-good">
+                                <span>🌡️</span>
+                            </div>
+                            <strong>${meteo.temperature_eau || '26°C'}</strong><br>
+                            <small class="text-muted">Température eau</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="meteo-circle ${vent > 20 ? 'meteo-bad' : 'meteo-good'}">
+                                <span>💨</span>
+                            </div>
+                            <strong>${meteo.vent || '15 km/h'}</strong><br>
+                            <small class="text-muted">Vent</small>
+                        </div>
+                    </div>
+                    <div class="row g-3 text-center mt-2">
+                        <div class="col-3">
+                            <small class="text-muted">🌙 Lune</small><br>
+                            <strong>${meteo.phase_lunaire || 'Quartier'}</strong>
+                        </div>
+                        <div class="col-3">
+                            <small class="text-muted">🌊 Vagues</small><br>
+                            <strong>${meteo.hauteur_vagues || '1.2 m'}</strong>
+                        </div>
+                        <div class="col-3">
+                            <small class="text-muted">🌧️ Pluie</small><br>
+                            <strong>${meteo.precipitation || '0 mm'}</strong>
+                        </div>
+                        <div class="col-3">
+                            <small class="text-muted">📊 Pression</small><br>
+                            <strong>${meteo.pression || '1013'}</strong>
+                        </div>
+                    </div>
+                `;
                 
-                // Carte météo avec données enrichies
-                if (p.meteo) {
-                    document.getElementById('meteo-card').innerHTML = `
-                        <h5 class="mb-3">🌤️ Conditions météo - ${p.port || 'Mahavatse - Tuléar'}</h5>
-                        <div class="row g-3 text-center">
-                            <div class="col-3">
-                                <div style="font-size:2rem;">🌡️</div>
-                                <strong>${p.meteo.temperature_eau || '26.5°C'}</strong>
-                                <br><small class="text-muted">Eau</small>
-                            </div>
-                            <div class="col-3">
-                                <div style="font-size:2rem;">💨</div>
-                                <strong>${p.meteo.vent || '15 km/h'}</strong>
-                                <br><small class="text-muted">Vent</small>
-                            </div>
-                            <div class="col-3">
-                                <div style="font-size:2rem;">🌙</div>
-                                <strong>${p.meteo.phase_lunaire || 'Quartier'}</strong>
-                                <br><small class="text-muted">Lune</small>
-                            </div>
-                            <div class="col-3">
-                                <div style="font-size:2rem;">📊</div>
-                                <strong>${p.meteo.pression || '1013 hPa'}</strong>
-                                <br><small class="text-muted">Pression</small>
-                            </div>
+                // Poisson le plus probable (GRAND)
+                if (p.predictions && p.predictions.length > 0) {
+                    const top = p.predictions[0];
+                    const prix = PRIX_MARCHE[top.espece] || {moyen: 15000, min: 10000, max: 20000};
+                    
+                    document.getElementById('top-poisson').style.display = 'block';
+                    document.getElementById('top-poisson-content').innerHTML = `
+                        <div style="font-size:5rem;">${top.icon || '🐟'}</div>
+                        <h3 style="color:#FF6B35;">${top.espece}</h3>
+                        <div class="huge-text" style="color:#00A896;">${top.probabilite || 0}%</div>
+                        <p class="big-text">de chances d'en trouver</p>
+                        <div class="d-flex justify-content-center gap-2 mt-2">
+                            <span class="tag tag-green">💰 ${prix.moyen.toLocaleString()} Ar/kg</span>
+                            <span class="tag tag-blue">📊 ~${top.quantite_estimee_kg || 0} kg</span>
+                            ${top.probabilite >= 70 ? '<span class="tag tag-green">✅ Bonne pêche</span>' : '<span class="tag tag-orange">⚠️ Moyen</span>'}
                         </div>
-                        <div class="row g-3 text-center mt-2">
-                            <div class="col-4">
-                                <small class="text-muted">🌊 Vagues</small><br>
-                                <strong>${p.meteo.hauteur_vagues || '1.2 m'}</strong>
-                            </div>
-                            <div class="col-4">
-                                <small class="text-muted">💧 Humidité</small><br>
-                                <strong>${p.meteo.humidite || '75%'}</strong>
-                            </div>
-                            <div class="col-4">
-                                <small class="text-muted">🌧️ Précip.</small><br>
-                                <strong>${p.meteo.precipitation || '2 mm'}</strong>
-                            </div>
-                        </div>
+                    `;
+                    
+                    // Message important
+                    document.getElementById('message-important').style.display = 'block';
+                    document.getElementById('conseil-principal').innerHTML = `
+                        <strong>${top.espece}</strong> est le poisson le plus probable demain.<br>
+                        Prix de vente : <strong>${prix.moyen.toLocaleString()} Ar/kg</strong>.
+                        ${top.probabilite >= 70 ? '👍 Bonne journée pour pêcher !' : '⚠️ Journée moyenne, soyez patient.'}
                     `;
                 }
                 
-                // Résumé IA
-                document.getElementById('resume-ia').style.display = 'block';
-                document.getElementById('ia-message').textContent = p.message || '🤖 IA - Analyse des conditions de pêche';
-                document.getElementById('ia-modele').textContent = '🧠 Modèle : ' + (p.modele || 'RandomForest + Régression');
-                document.getElementById('ia-nb-donnees').textContent = '📈 Données analysées : ' + (p.nb_donnees || '365') + ' jours';
-                document.getElementById('ia-date-maj').textContent = '🕐 Mis à jour : ' + new Date().toLocaleString('fr-FR');
-                document.getElementById('ia-confiance').textContent = (p.confiance_globale || 78) + '%';
-                
-                const confiance = p.confiance_globale || 78;
-                document.getElementById('ia-confiance').style.color = 
-                    confiance >= 75 ? '#00A896' : 
-                    confiance >= 50 ? '#FFD166' : '#FF6B35';
-                
-                // Prédictions avec données réelles enrichies
-                if (p.predictions && p.predictions.length > 0) {
-                    document.getElementById('predictions').innerHTML = p.predictions.map((pr, i) => {
-                        // Enrichir avec les données réelles du marché
-                        const prixMarche = PRIX_MARCHE[pr.espece] || {min: 5000, max: 20000, moyen: 12000};
+                // Autres poissons (liste simple)
+                if (p.predictions && p.predictions.length > 1) {
+                    document.getElementById('predictions').innerHTML = p.predictions.slice(1).map((pr, i) => {
+                        const prix = PRIX_MARCHE[pr.espece] || {moyen: 12000};
                         const saison = SAISONS_PECHE[pr.espece];
                         const moisActuel = new Date().getMonth() + 1;
                         const enSaison = saison ? (moisActuel >= saison.debut && moisActuel <= saison.fin) : true;
-                        const picSaison = saison ? saison.pic.includes(moisActuel) : false;
                         
                         return `
-                        <div class="card-ocean p-3 mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <div class="d-flex align-items-center gap-3">
-                                    <span style="font-size:2.5rem;">${pr.icon || '🐟'}</span>
-                                    <div>
-                                        <strong class="fs-5">${pr.espece}</strong>
-                                        ${pr.tendance === 'hausse' ? '<span class="badge bg-success ms-2">📈 Hausse</span>' : 
-                                          pr.tendance === 'baisse' ? '<span class="badge bg-danger ms-2">📉 Baisse</span>' : 
-                                          '<span class="badge bg-secondary ms-2">➡️ Stable</span>'}
-                                        ${enSaison ? '<span class="badge bg-info ms-1">🎯 En saison</span>' : '<span class="badge bg-secondary ms-1">Hors saison</span>'}
-                                        ${picSaison ? '<span class="badge bg-warning text-dark ms-1">🔥 Pic</span>' : ''}
+                        <div class="card-ocean p-3 mb-2">
+                            <div class="d-flex align-items-center gap-3">
+                                <span style="font-size:2.5rem;">${pr.icon || '🐟'}</span>
+                                <div class="flex-grow-1">
+                                    <strong class="big-text">${pr.espece}</strong>
+                                    <div class="d-flex gap-2 mt-1 flex-wrap">
+                                        <span class="tag tag-blue">💰 ${prix.moyen.toLocaleString()} Ar/kg</span>
+                                        ${enSaison ? '<span class="tag tag-green">✅ En saison</span>' : '<span class="tag tag-red">❌ Hors saison</span>'}
                                     </div>
                                 </div>
-                                <span class="badge fs-6 ${getConfianceClass(pr.confiance)}">${pr.confiance || 'N/A'}</span>
-                            </div>
-                            
-                            <!-- Barre de probabilité -->
-                            <div class="progress mb-3" style="height: 25px; border-radius: 15px;">
-                                <div class="progress-bar ${getProgressClass(pr.probabilite || 0)}" 
-                                     style="width: ${pr.probabilite || 0}%;" 
-                                     role="progressbar">
-                                    ${pr.probabilite || 0}% de chances
+                                <div class="text-center">
+                                    <div style="font-size:1.5rem;font-weight:800;color:#FF6B35;">${pr.probabilite}%</div>
+                                    <small class="text-muted">chances</small>
                                 </div>
                             </div>
-                            
-                            <div class="row g-2">
-                                <div class="col-4">
-                                    <div class="bg-light rounded p-2 text-center h-100">
-                                        <small class="text-muted">📊 Quantité</small><br>
-                                        <strong>~${pr.quantite_estimee_kg || 0} kg</strong>
-                                    </div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="bg-light rounded p-2 text-center h-100">
-                                        <small class="text-muted">💰 Prix suggéré</small><br>
-                                        <strong>${(prixMarche.moyen || 0).toLocaleString()} Ar/kg</strong>
-                                        <br><small class="text-muted">${prixMarche.min.toLocaleString()} - ${prixMarche.max.toLocaleString()} Ar</small>
-                                    </div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="bg-light rounded p-2 text-center h-100">
-                                        <small class="text-muted">🌙 Saison</small><br>
-                                        <strong>${saison ? `Mois ${saison.debut}-${saison.fin}` : 'Toute l\'année'}</strong>
-                                    </div>
+                            <!-- Barre de progression -->
+                            <div class="progress mt-2 progress-thick">
+                                <div class="progress-bar ${pr.probabilite >= 70 ? 'bg-success' : pr.probabilite >= 45 ? 'bg-warning' : 'bg-secondary'}" 
+                                     style="width: ${pr.probabilite}%;">
+                                    ${pr.probabilite >= 50 ? '👍' : '👎'}
                                 </div>
                             </div>
                         </div>`;
                     }).join('');
-                } else {
-                    document.getElementById('predictions').innerHTML = `
-                        <div class="card-ocean p-4 text-center">
-                            <p class="text-muted">Aucune prédiction disponible</p>
-                        </div>`;
                 }
                 
-                // Conseils personnalisés
+                // Conseils pratiques (langage simple)
                 if (p.predictions && p.predictions.length > 0) {
                     document.getElementById('conseils').style.display = 'block';
                     const top = p.predictions[0];
-                    const second = p.predictions[1] || top;
-                    const topPrix = PRIX_MARCHE[top.espece] || {moyen: 15000};
+                    const prix = PRIX_MARCHE[top.espece] || {moyen: 15000};
                     
-                    document.getElementById('conseils-liste').innerHTML = `
-                        <li>🎯 <strong>${top.espece}</strong> est l'espèce la plus probable aujourd'hui (${top.probabilite}%)</li>
-                        <li>💰 Prix de vente conseillé : <strong>${topPrix.moyen.toLocaleString()} Ar/kg</strong> (fourchette : ${topPrix.min.toLocaleString()} - ${topPrix.max.toLocaleString()} Ar)</li>
-                        <li>📈 Tendance du marché : <strong>${top.tendance === 'hausse' ? '📈 Prix en hausse' : top.tendance === 'baisse' ? '📉 Prix en baisse' : '➡️ Stable'}</strong></li>
-                        <li>🥈 Alternative : <strong>${second.espece}</strong> avec ${second.probabilite}% de probabilité</li>
-                        <li>⏰ Meilleur moment pour pêcher : <strong>4h - 8h du matin</strong> (température idéale)</li>
-                        <li>📍 Zone recommandée : <strong>${p.port || 'Large de Mahavatse'}</strong></li>
-                        <li>💡 Conseil : ${top.probabilite >= 70 ? 'Conditions excellentes, prévoyez de la place dans votre pirogue !' : 'Conditions moyennes, diversifiez vos techniques de pêche.'}</li>
-                    `;
+                    const conseils = [
+                        {icon: '🎯', text: `Va pêcher le <strong>${top.espece}</strong> demain`},
+                        {icon: '💰', text: `Vends à <strong>${prix.moyen.toLocaleString()} Ar/kg</strong>`},
+                        {icon: '⏰', text: 'Pars tôt le matin (4h-8h)'},
+                        {icon: '📍', text: `Zone : <strong>${p.port || 'Large de Mahavatse'}</strong>`},
+                    ];
+                    
+                    if (vent > 20) conseils.push({icon: '⚠️', text: 'Attention : vent fort, sois prudent'});
+                    if (vent < 10) conseils.push({icon: '👍', text: 'Mer calme, bonne journée pour pêcher'});
+                    if (pluie > 5) conseils.push({icon: '🌧️', text: 'Prévois une protection contre la pluie'});
+                    
+                    document.getElementById('conseils-liste').innerHTML = conseils.map(c => `
+                        <li style="padding: 10px; border-bottom: 1px solid #ddd; font-size: 1.1rem;">
+                            ${c.icon} ${c.text}
+                        </li>
+                    `).join('');
                 }
                 
-                // Avertissement si données simulées
                 if (p.warning) {
                     showToast('⚠️ ' + p.warning, 'warning');
                 }
@@ -250,43 +295,23 @@
                 document.getElementById('predictions').innerHTML = `
                     <div class="card-ocean p-5 text-center">
                         <div style="font-size:5rem;">🧠</div>
-                        <h5>Données insuffisantes</h5>
-                        <p class="text-muted">L'IA a besoin de plus de données historiques pour générer des prédictions précises.</p>
-                        <button class="btn btn-coral mt-3" onclick="load()">
-                            <i class="bi bi-arrow-clockwise"></i> Réessayer
-                        </button>
+                        <h5>Pas assez de données</h5>
+                        <p class="text-muted">Reviens plus tard</p>
+                        <button class="btn btn-coral mt-3" onclick="load()">Réessayer</button>
                     </div>`;
             }
         } catch (err) {
             document.getElementById('predictions').innerHTML = `
                 <div class="card-ocean p-5 text-center">
                     <div style="font-size:5rem;">❌</div>
-                    <h5>Erreur de chargement</h5>
+                    <h5>Erreur</h5>
                     <p class="text-muted">${err.message}</p>
                     <button class="btn btn-coral mt-3" onclick="load()">Réessayer</button>
                 </div>`;
         }
     }
 
-    function getConfianceClass(confiance) {
-        switch (confiance) {
-            case 'Élevée': return 'bg-success';
-            case 'Moyenne': return 'bg-warning text-dark';
-            case 'Faible': return 'bg-secondary';
-            default: return 'bg-info';
-        }
-    }
-
-    function getProgressClass(probabilite) {
-        if (probabilite >= 75) return 'bg-success';
-        if (probabilite >= 50) return 'bg-warning';
-        return 'bg-secondary';
-    }
-
-    // Charger au démarrage
     load();
-    
-    // Rafraîchir toutes les 5 minutes
     setInterval(load, 300000);
 </script>
 {% endblock %}
