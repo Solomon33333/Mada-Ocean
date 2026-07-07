@@ -80,38 +80,26 @@
         </div>
     </div>
 
-    // Dans loadMarket(), après le bouton "Ajouter au panier"
-${currentUser && currentUser.role === 'pecheur' && currentUser.id === p.pecheur_id ? `
-    <div class="d-flex gap-1 mt-2">
-        <button class="btn btn-outline-warning btn-sm flex-grow-1" onclick="ouvrirModifier(${p.id})">
-            <i class="bi bi-pencil"></i> Modifier
-        </button>
-        <button class="btn btn-outline-danger btn-sm flex-grow-1" onclick="supprimerPrise(${p.id})">
-            <i class="bi bi-trash"></i> Supprimer
-        </button>
-    </div>
-` : ''}
-
-<!-- Modal Modifier une prise -->
-<div class="modal fade" id="modifierModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content" style="border-radius:20px;">
-            <div class="modal-header" style="background:#FFD166;color:#333;border-radius:20px 20px 0 0;">
-                <h5 class="modal-title">✏️ Modifier la prise</h5>
-                <button class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="modifier-modal-body">
-                <!-- Rempli dynamiquement -->
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                <button class="btn btn-warning" onclick="enregistrerModification()">
-                    <i class="bi bi-check-circle"></i> Enregistrer
-                </button>
+    <!-- Modal Modifier une prise -->
+    <div class="modal fade" id="modifierModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content" style="border-radius:20px;">
+                <div class="modal-header" style="background:#FFD166;color:#333;border-radius:20px 20px 0 0;">
+                    <h5 class="modal-title">✏️ Modifier la prise</h5>
+                    <button class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="modifier-modal-body">
+                    <!-- Rempli dynamiquement -->
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button class="btn btn-warning" onclick="enregistrerModification()">
+                        <i class="bi bi-check-circle"></i> Enregistrer
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
     
 </div>
 {% endblock %}
@@ -145,17 +133,39 @@ ${currentUser && currentUser.role === 'pecheur' && currentUser.id === p.pecheur_
         right: 10px;
         z-index: 1;
     }
+    .btn-outline-coral {
+        color: #FF6B35;
+        border-color: #FF6B35;
+    }
+    .btn-outline-coral:hover {
+        background-color: #FF6B35;
+        color: white;
+    }
+    .loading-spinner {
+        width: 3rem;
+        height: 3rem;
+        border: 0.3rem solid rgba(255,255,255,0.3);
+        border-top-color: #FF6B35;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
 </style>
 
 <script>
     let priseSelectionnee = null;
+    let priseAModifier = null;
     // currentUser est déjà défini dans base.html
 
+    // === INITIALISATION ===
     async function init() {
         await loadMarket();
         await updatePanierCount();
     }
 
+    // === MISE À JOUR PANIER ===
     async function updatePanierCount() {
         if (!currentUser || currentUser.role !== 'acheteur') return;
         try {
@@ -163,10 +173,15 @@ ${currentUser && currentUser.role === 'pecheur' && currentUser.id === p.pecheur_
             if (res.success && res.nb_articles > 0) {
                 document.getElementById('panier-count').textContent = res.nb_articles;
                 document.getElementById('panier-count').style.display = 'inline';
+            } else {
+                document.getElementById('panier-count').style.display = 'none';
             }
-        } catch (e) {}
+        } catch (e) {
+            console.error('Erreur updatePanierCount:', e);
+        }
     }
 
+    // === CHARGEMENT DU MARCHÉ ===
     async function loadMarket() {
         const params = new URLSearchParams({
             statut: 'active',
@@ -187,10 +202,10 @@ ${currentUser && currentUser.role === 'pecheur' && currentUser.id === p.pecheur_
                     <div class="col-md-4 col-lg-3 col-6">
                         <div class="card-ocean h-100 overflow-hidden position-relative">
                             <!-- Badges -->
-                            ${p.qualite === 'A+' ? '<span class="badge bg-success qualite-badge">Premium</span>' : ''}
+                            ${p.qualite === 'A+' ? '<span class="badge bg-success qualite-badge">⭐ Premium</span>' : ''}
                             ${p.stock_kg < 5 ? '<span class="badge bg-warning text-dark stock-badge">⚠️ Stock limité</span>' : ''}
                             
-                            <!-- IMAGE RÉELLE -->
+                            <!-- IMAGE -->
                             <img src="${p.image_url || 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=400'}" 
                                  alt="${p.espece}" 
                                  class="product-image"
@@ -217,11 +232,20 @@ ${currentUser && currentUser.role === 'pecheur' && currentUser.id === p.pecheur_
                                     📍 ${p.port || 'Tuléar'}
                                 </div>
                                 
-                                <!-- Bouton selon le statut -->
+                                <!-- Boutons action -->
                                 ${currentUser && currentUser.role === 'acheteur' ? `
                                     <button class="btn btn-coral w-100 btn-sm" onclick="ouvrirPanier(${p.id})">
                                         <i class="bi bi-cart-plus"></i> Ajouter au panier
                                     </button>
+                                ` : currentUser && currentUser.role === 'pecheur' && currentUser.id === p.pecheur_id ? `
+                                    <div class="d-flex gap-1 mt-2">
+                                        <button class="btn btn-outline-warning btn-sm flex-grow-1" onclick="ouvrirModifier(${p.id})">
+                                            <i class="bi bi-pencil"></i> Modifier
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm flex-grow-1" onclick="supprimerPrise(${p.id})">
+                                            <i class="bi bi-trash"></i> Supprimer
+                                        </button>
+                                    </div>
                                 ` : currentUser ? `
                                     <div class="alert alert-warning small text-center mb-0 p-2">
                                         🔒 Réservé aux acheteurs
@@ -251,6 +275,7 @@ ${currentUser && currentUser.role === 'pecheur' && currentUser.id === p.pecheur_
                     </div>`;
             }
         } catch (err) {
+            console.error('Erreur loadMarket:', err);
             document.getElementById('market').innerHTML = `
                 <div class="col-12">
                     <div class="card-ocean p-5 text-center">
@@ -262,6 +287,7 @@ ${currentUser && currentUser.role === 'pecheur' && currentUser.id === p.pecheur_
         }
     }
 
+    // === OUVRIR PANIER ===
     async function ouvrirPanier(priseId) {
         try {
             const res = await fetch('/api/prises?statut=active').then(r => r.json());
@@ -316,10 +342,12 @@ ${currentUser && currentUser.role === 'pecheur' && currentUser.id === p.pecheur_
             
             new bootstrap.Modal(document.getElementById('panierModal')).show();
         } catch (err) {
+            console.error('Erreur ouvrirPanier:', err);
             alert('Erreur lors du chargement du produit');
         }
     }
 
+    // === AJOUTER AU PANIER ===
     async function ajouterAuPanier() {
         if (!priseSelectionnee) return;
         
@@ -350,143 +378,237 @@ ${currentUser && currentUser.role === 'pecheur' && currentUser.id === p.pecheur_
                 showToast('❌ ' + (res.message || 'Erreur'), 'error');
             }
         } catch (err) {
+            console.error('Erreur ajouterAuPanier:', err);
             showToast('❌ Erreur lors de l\'ajout au panier', 'error');
         }
     }
-let priseAModifier = null;
 
-// Ouvrir le modal de modification
-async function ouvrirModifier(priseId) {
-    const res = await fetch('/api/prises?statut=active').then(r => r.json());
-    const prise = res.prises.find(p => p.id === priseId);
-    
-    if (!prise) { alert('Prise introuvable'); return; }
-    if (prise.pecheur_id !== currentUser.id) { alert('Non autorisé'); return; }
-    
-    priseAModifier = prise;
-    
-    document.getElementById('modifier-modal-body').innerHTML = `
-        <div class="row g-3">
-            <div class="col-md-7">
-                <div class="mb-3">
-                    <label class="form-label fw-bold">🐟 Espèce</label>
-                    <select class="form-select" id="modif-espece">
-                        <option value="Thon Jaune" ${prise.espece === 'Thon Jaune' ? 'selected' : ''}>🐟 Thon Jaune</option>
-                        <option value="Espadon" ${prise.espece === 'Espadon' ? 'selected' : ''}>🐠 Espadon</option>
-                        <option value="Maquereau" ${prise.espece === 'Maquereau' ? 'selected' : ''}>🎣 Maquereau</option>
-                        <option value="Langouste" ${prise.espece === 'Langouste' ? 'selected' : ''}>🦞 Langouste</option>
-                        <option value="Crabes" ${prise.espece === 'Crabes' ? 'selected' : ''}>🦀 Crabes</option>
-                        <option value="Poulpe" ${prise.espece === 'Poulpe' ? 'selected' : ''}>🐙 Poulpe</option>
-                        <option value="Calmar" ${prise.espece === 'Calmar' ? 'selected' : ''}>🦑 Calmar</option>
-                    </select>
-                </div>
-                <div class="row mb-3">
-                    <div class="col-6">
-                        <label class="form-label fw-bold">⚖️ Poids (kg)</label>
-                        <input type="number" class="form-control" id="modif-poids" value="${prise.poids_kg}" step="0.1">
+    // === OUVRIRE MODIFICATION ===
+    async function ouvrirModifier(priseId) {
+        try {
+            const res = await fetch('/api/prises?statut=active').then(r => r.json());
+            const prise = res.prises.find(p => p.id === priseId);
+            
+            if (!prise) { 
+                showToast('❌ Prise introuvable', 'error');
+                return; 
+            }
+            
+            if (!currentUser || prise.pecheur_id !== currentUser.id) { 
+                showToast('❌ Non autorisé', 'error');
+                return; 
+            }
+            
+            priseAModifier = prise;
+            
+            document.getElementById('modifier-modal-body').innerHTML = `
+                <div class="row g-3">
+                    <div class="col-md-7">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">🐟 Espèce</label>
+                            <select class="form-select" id="modif-espece">
+                                <option value="Thon Jaune" ${prise.espece === 'Thon Jaune' ? 'selected' : ''}>🐟 Thon Jaune</option>
+                                <option value="Espadon" ${prise.espece === 'Espadon' ? 'selected' : ''}>🐠 Espadon</option>
+                                <option value="Maquereau" ${prise.espece === 'Maquereau' ? 'selected' : ''}>🎣 Maquereau</option>
+                                <option value="Langouste" ${prise.espece === 'Langouste' ? 'selected' : ''}>🦞 Langouste</option>
+                                <option value="Crabes" ${prise.espece === 'Crabes' ? 'selected' : ''}>🦀 Crabes</option>
+                                <option value="Poulpe" ${prise.espece === 'Poulpe' ? 'selected' : ''}>🐙 Poulpe</option>
+                                <option value="Calmar" ${prise.espece === 'Calmar' ? 'selected' : ''}>🦑 Calmar</option>
+                            </select>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-bold">⚖️ Poids (kg)</label>
+                                <input type="number" class="form-control" id="modif-poids" value="${prise.poids_kg}" step="0.1" min="0.1">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-bold">💰 Prix/kg (Ar)</label>
+                                <input type="number" class="form-control" id="modif-prix" value="${prise.prix_kg}" min="100">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">📍 Zone de pêche</label>
+                            <input type="text" class="form-control" id="modif-zone" value="${prise.zone || ''}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">📝 Description</label>
+                            <textarea class="form-control" id="modif-description" rows="2">${prise.description || ''}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">⭐ Qualité</label>
+                            <select class="form-select" id="modif-qualite">
+                                <option value="A+" ${prise.qualite === 'A+' ? 'selected' : ''}>A+ - Exceptionnelle</option>
+                                <option value="A" ${prise.qualite === 'A' ? 'selected' : ''}>A - Très bonne</option>
+                                <option value="B+" ${prise.qualite === 'B+' ? 'selected' : ''}>B+ - Bonne</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="col-6">
-                        <label class="form-label fw-bold">💰 Prix/kg (Ar)</label>
-                        <input type="number" class="form-control" id="modif-prix" value="${prise.prix_kg}">
+                    <div class="col-md-5 text-center">
+                        <label class="form-label fw-bold">📸 Photo actuelle</label>
+                        <img src="${prise.image_url || 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=400'}" 
+                             style="width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:10px;"
+                             id="modif-image-preview"
+                             onerror="this.src='https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=400'">
+                        <input type="file" class="form-control" id="modif-photo" accept="image/*" onchange="previewModifImage(event)">
+                        <small class="text-muted d-block mt-1">Laissez vide pour garder l'image actuelle</small>
                     </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">📍 Zone de pêche</label>
-                    <input type="text" class="form-control" id="modif-zone" value="${prise.zone || ''}">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">📝 Description</label>
-                    <textarea class="form-control" id="modif-description" rows="2">${prise.description || ''}</textarea>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">⭐ Qualité</label>
-                    <select class="form-select" id="modif-qualite">
-                        <option value="A+" ${prise.qualite === 'A+' ? 'selected' : ''}>A+ - Exceptionnelle</option>
-                        <option value="A" ${prise.qualite === 'A' ? 'selected' : ''}>A - Très bonne</option>
-                        <option value="B+" ${prise.qualite === 'B+' ? 'selected' : ''}>B+ - Bonne</option>
-                    </select>
-                </div>
-            </div>
-            <div class="col-md-5 text-center">
-                <label class="form-label fw-bold">📸 Photo actuelle</label>
-                <img src="${prise.image_url || 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=400'}" 
-                     style="width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:10px;">
-                <input type="file" class="form-control" id="modif-photo" accept="image/*" onchange="previewModifImage(event)">
-                <input type="hidden" id="modif-image-url" value="${prise.image_url || ''}">
-            </div>
-        </div>
-    `;
-    
-    new bootstrap.Modal(document.getElementById('modifierModal')).show();
-}
-
-// Prévisualisation image modification
-function previewModifImage(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        document.getElementById('modif-image-url').value = e.target.result;
-    };
-    reader.readAsDataURL(file);
-}
-
-// Enregistrer les modifications
-async function enregistrerModification() {
-    if (!priseAModifier) return;
-    
-    const data = {
-        espece: document.getElementById('modif-espece').value,
-        poids_kg: parseFloat(document.getElementById('modif-poids').value),
-        prix_kg: parseFloat(document.getElementById('modif-prix').value),
-        zone: document.getElementById('modif-zone').value,
-        description: document.getElementById('modif-description').value,
-        qualite: document.getElementById('modif-qualite').value,
-        image_url: document.getElementById('modif-image-url').value
-    };
-    
-    const icones = {'Thon Jaune': '🐟', 'Espadon': '🐠', 'Maquereau': '🎣', 'Langouste': '🦞', 'Crabes': '🦀', 'Poulpe': '🐙', 'Calmar': '🦑'};
-    data.icon = icones[data.espece] || '🐟';
-    
-    try {
-        const res = await fetch(`/api/prises/${priseAModifier.id}`, {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-        }).then(r => r.json());
-        
-        if (res.success) {
-            showToast('✅ ' + res.message, 'success');
-            bootstrap.Modal.getInstance(document.getElementById('modifierModal')).hide();
-            loadMarket();
-        } else {
-            showToast('❌ ' + res.message, 'error');
+            `;
+            
+            new bootstrap.Modal(document.getElementById('modifierModal')).show();
+        } catch (err) {
+            console.error('Erreur ouvrirModifier:', err);
+            showToast('❌ Erreur lors du chargement', 'error');
         }
-    } catch (err) {
-        showToast('❌ Erreur lors de la modification', 'error');
     }
-}
 
-// Supprimer une prise
-async function supprimerPrise(priseId) {
-    if (!confirm('🗑️ Voulez-vous vraiment supprimer cette prise ? Cette action est irréversible.')) return;
-    
-    try {
-        const res = await fetch(`/api/prises/${priseId}`, {
-            method: 'DELETE'
-        }).then(r => r.json());
-        
-        if (res.success) {
-            showToast('🗑️ ' + res.message, 'success');
-            loadMarket();
-        } else {
-            showToast('❌ ' + res.message, 'error');
+    // === PRÉVISUALISATION IMAGE ===
+    function previewModifImage(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('modif-image-preview').src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // === ENREGISTRER MODIFICATION ===
+    async function enregistrerModification() {
+        if (!priseAModifier) {
+            showToast('❌ Aucune prise sélectionnée', 'error');
+            return;
         }
-    } catch (err) {
-        showToast('❌ Erreur lors de la suppression', 'error');
+        
+        const espece = document.getElementById('modif-espece').value;
+        const poids = parseFloat(document.getElementById('modif-poids').value);
+        const prix = parseFloat(document.getElementById('modif-prix').value);
+        
+        // Validation
+        if (!poids || poids <= 0) { showToast('❌ Poids invalide', 'error'); return; }
+        if (!prix || prix <= 0) { showToast('❌ Prix invalide', 'error'); return; }
+        
+        const icones = {'Thon Jaune': '🐟', 'Espadon': '🐠', 'Maquereau': '🎣', 'Langouste': '🦞', 'Crabes': '🦀', 'Poulpe': '🐙', 'Calmar': '🦑'};
+        
+        const data = {
+            espece: espece,
+            poids_kg: poids,
+            prix_kg: prix,
+            zone: document.getElementById('modif-zone').value,
+            description: document.getElementById('modif-description').value,
+            qualite: document.getElementById('modif-qualite').value,
+            icon: icones[espece] || '🐟'
+        };
+        
+        // Si une nouvelle image a été téléchargée
+        const imagePreview = document.getElementById('modif-image-preview');
+        if (imagePreview && imagePreview.src && imagePreview.src.startsWith('data:')) {
+            data.image_url = imagePreview.src;
+        }
+        
+        try {
+            const res = await fetch(`/api/prises/${priseAModifier.id}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            }).then(r => r.json());
+            
+            if (res.success) {
+                showToast('✅ ' + res.message, 'success');
+                bootstrap.Modal.getInstance(document.getElementById('modifierModal')).hide();
+                await loadMarket();
+            } else {
+                showToast('❌ ' + (res.message || 'Erreur'), 'error');
+            }
+        } catch (err) {
+            console.error('Erreur enregistrerModification:', err);
+            showToast('❌ Erreur lors de la modification', 'error');
+        }
     }
-}
 
-    init();
+    // === SUPPRIMER PRISE ===
+    async function supprimerPrise(priseId) {
+        if (!confirm('🗑️ Voulez-vous vraiment supprimer cette prise ? Cette action est irréversible.')) return;
+        
+        try {
+            const res = await fetch(`/api/prises/${priseId}`, {
+                method: 'DELETE'
+            }).then(r => r.json());
+            
+            if (res.success) {
+                showToast('🗑️ ' + res.message, 'success');
+                await loadMarket();
+            } else {
+                showToast('❌ ' + (res.message || 'Erreur'), 'error');
+            }
+        } catch (err) {
+            console.error('Erreur supprimerPrise:', err);
+            showToast('❌ Erreur lors de la suppression', 'error');
+        }
+    }
+
+    // === TOAST NOTIFICATION ===
+    function showToast(message, type = 'info') {
+        // Vérifier si un conteneur de toast existe, sinon le créer
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.style.position = 'fixed';
+            toastContainer.style.bottom = '20px';
+            toastContainer.style.right = '20px';
+            toastContainer.style.zIndex = '9999';
+            document.body.appendChild(toastContainer);
+        }
+        
+        const colors = {
+            success: '#28a745',
+            error: '#dc3545',
+            warning: '#ffc107',
+            info: '#17a2b8'
+        };
+        
+        const toast = document.createElement('div');
+        toast.className = 'toast align-items-center show';
+        toast.role = 'alert';
+        toast.style.backgroundColor = colors[type] || colors.info;
+        toast.style.color = 'white';
+        toast.style.borderRadius = '8px';
+        toast.style.padding = '12px 20px';
+        toast.style.marginBottom = '10px';
+        toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+        toast.style.animation = 'slideInRight 0.5s ease';
+        toast.textContent = message;
+        
+        // Ajout animation CSS si non présente
+        if (!document.getElementById('toast-styles')) {
+            const style = document.createElement('style');
+            style.id = 'toast-styles';
+            style.textContent = `
+                @keyframes slideInRight {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOutRight {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        toastContainer.appendChild(toast);
+        
+        // Auto-suppression après 4 secondes
+        setTimeout(() => {
+            toast.style.animation = 'slideOutRight 0.5s ease';
+            setTimeout(() => {
+                if (toast.parentNode) toast.remove();
+            }, 500);
+        }, 4000);
+    }
+
+    // Initialisation au chargement de la page
+    document.addEventListener('DOMContentLoaded', init);
 </script>
 {% endblock %}
